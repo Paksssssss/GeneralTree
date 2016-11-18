@@ -53,7 +53,7 @@ public class GeneralTree {
 
     public void insert(TreeNode node) {
         if (getRedundantNode(node)!=null) {
-            if (!currentNode.isDir) {
+            if (!currentNode.) {
                 currentNode.getChildren().add(node);
             } else {
                 System.out.println("This Node is a File.");
@@ -102,35 +102,59 @@ public class GeneralTree {
     }
 }
 
+class Descriptor implements Comparable<Descriptor>{
+    boolean isDir;
+    String fileType;
+    String fileName;
+    String dateCreated;
+    String dateModified;
+
+    public Descriptor(){
+        this.isDir = false;
+        this.fileType = "";
+        this.fileName = "";
+    }
+    public Descriptor(String fileName,String fileType){
+        this.fileName = fileName;
+        this.fileType = fileType;
+    }
+    
+    @Override
+    public int compareTo(Descriptor o) {
+        if (this.isDir == o.isDir && this.fileName == o.fileName && this.fileType == o.fileType) {
+            return 1;
+        }
+        return 0;
+    }
+}
+
 class TreeNode {
     private TreeNode parent;
     private String content;
-    private String name;
-    boolean isDir;
+    private Descriptor fileDescriptor;
     private ArrayList<TreeNode> children;
     public TreeNode(){
         parent = null;
-        isDir = false;
         content = "";
         children = new ArrayList();
     }
     public TreeNode(TreeNode parent){
         this.parent = parent;
-        isDir = false;
+        this.fileDescriptor.isDir = false;
         content = "";
         children = new ArrayList();
     }
     public TreeNode(String name, TreeNode parent){
-        this.name = name;
+        this.fileDescriptor.fileName = name;
         this.parent = parent;
-        isDir = false;
+        this.fileDescriptor.isDir = false;
         content = "";
         children = new ArrayList();
     }
     public TreeNode(String name){
-        this.name = name;
+        this.fileDescriptor.fileName = name;
         parent = null;
-        isDir = false;
+        this.fileDescriptor.isDir = false;
         content = "";
         children = new ArrayList();
     }
@@ -138,7 +162,7 @@ class TreeNode {
         this.parent = parent;
         this.children = children;
         content = "";
-        isDir = true;
+        this.fileDescriptor.isDir = true;
     }
 
     /**
@@ -167,20 +191,6 @@ class TreeNode {
      */
     public void setContent(String content) {
         this.content = content;
-    }
-
-    /**
-     * @return the name
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * @param name the name to set
-     */
-    public void setName(String name) {
-        this.name = name;
     }
 
     /**
