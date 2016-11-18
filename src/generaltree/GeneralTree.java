@@ -1,3 +1,5 @@
+package generaltree;
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -26,14 +28,14 @@ public class GeneralTree {
         this.root = root;
     }
 
-    public String search(String name) {
+    public String search(TreeNode node) {
         PriorityQueue<TreeNode> nodeQueue = new PriorityQueue();
         nodeQueue.add(root);
         boolean isFound = false;
         TreeNode temp;
         do {
             temp = nodeQueue.poll();
-            if (temp.getName().compareTo(name) == 0) {
+            if (temp.compareTo(node) == 1) {
                 isFound = true;
                 break;
             } else if (!temp.getChildren().isEmpty()) {
@@ -42,27 +44,17 @@ public class GeneralTree {
         } while (!nodeQueue.isEmpty());
         String path = "";
         if (isFound) {
-            path = "\\" + temp.getName();
+            path = "\\" + temp.getFileDescriptor().fileName;
             while (!temp.equals(root)) {
                 temp = temp.getParent();
-                path = "\\" + temp.getName() + path;
+                path = "\\" + temp.getFileDescriptor().fileName;
             }
         }
         return path;
     }
 
-    public void insert(TreeNode node) {
-        if (getRedundantNode(node)!=null) {
-            if (!currentNode.) {
-                currentNode.getChildren().add(node);
-            } else {
-                System.out.println("This Node is a File.");
-            }
-        } else {
-            System.out.println("Node already exists. Overwriting...");
-            currentNode.getChildren().remove(getRedundantNode(node));
-            currentNode.getChildren().add(node);
-        }
+    public void insert(String path,TreeNode node) {
+        
     }
 
     public void delete(TreeNode node){
@@ -94,11 +86,16 @@ public class GeneralTree {
 
     private TreeNode getRedundantNode(TreeNode node) {
         for (TreeNode childNode : currentNode.getChildren()) {
-            if (childNode.getName().compareTo(node.getName()) == 0) {
+            if (childNode.getFileDescriptor().compareTo(node.getFileDescriptor()) == 0) {
                 return childNode;
             }
         }
         return null;
+    }
+    
+    private TreeNode goToPath(String path){
+        String tempPath[] = path.split("\\\\");
+        boolean error = false;
     }
 }
 
@@ -114,6 +111,7 @@ class Descriptor implements Comparable<Descriptor>{
         this.fileType = "";
         this.fileName = "";
     }
+    
     public Descriptor(String fileName,String fileType){
         this.fileName = fileName;
         this.fileType = fileType;
@@ -128,7 +126,7 @@ class Descriptor implements Comparable<Descriptor>{
     }
 }
 
-class TreeNode {
+class TreeNode implements Comparable<TreeNode>{
     private TreeNode parent;
     private String content;
     private Descriptor fileDescriptor;
@@ -193,6 +191,8 @@ class TreeNode {
         this.content = content;
     }
 
+    
+
     /**
      * @return the children
      */
@@ -205,5 +205,27 @@ class TreeNode {
      */
     public void setChildren(ArrayList<TreeNode> children) {
         this.children = children;
+    }
+
+    /**
+     * @return the fileDescriptor
+     */
+    public Descriptor getFileDescriptor() {
+        return fileDescriptor;
+    }
+
+    /**
+     * @param fileDescriptor the fileDescriptor to set
+     */
+    public void setFileDescriptor(Descriptor fileDescriptor) {
+        this.fileDescriptor = fileDescriptor;
+    }
+
+    @Override
+    public int compareTo(TreeNode node) {
+        if (this.parent.compareTo(node.getParent())==1 && this.fileDescriptor.compareTo(node.getFileDescriptor())==1 && this.children.equals(node.getChildren())) {
+            return 1;
+        }
+        return 0;
     }
 }
