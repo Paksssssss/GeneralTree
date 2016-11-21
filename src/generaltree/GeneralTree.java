@@ -7,6 +7,7 @@ package generaltree;
  */
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
@@ -113,18 +114,20 @@ class Descriptor implements Comparable<Descriptor>{
     boolean isDir;
     String fileType;
     String fileName;
-    String dateCreated;
-    String dateModified;
+    Date dateCreated;
+    Date dateModified;
 
     public Descriptor(){
         this.isDir = false;
         this.fileType = "";
         this.fileName = "";
+        this.setDate();
     }
 
     public Descriptor(String fileName,String fileType){
         this.fileName = fileName;
         this.fileType = fileType;
+        this.setDate();
     }
 
     @Override
@@ -133,6 +136,11 @@ class Descriptor implements Comparable<Descriptor>{
             return 1;
         }
         return 0;
+    }
+    
+    private void setDate(){
+        this.dateCreated = new Date();
+        this.dateModified = new Date();
     }
 }
 
@@ -172,7 +180,8 @@ class TreeNode implements Comparable<TreeNode>{
         content = "";
         this.fileDescriptor.isDir = true;
     }
-
+    
+    
     /**
      * @return the parent
      */
@@ -246,5 +255,6 @@ class FileSystem{
     public FileSystem(){
         TreeNode home = new TreeNode("home");
         home.getFileDescriptor().isDir = true;
+        system = new GeneralTree(home);
     }
 }
