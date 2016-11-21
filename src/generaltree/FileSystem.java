@@ -32,6 +32,11 @@ public class FileSystem{
         home.getFileDescriptor().isDir = true;
         system = new GeneralTree(home);
     }
+    
+    public void navigate(){
+        
+    }
+    
 }
 
 class GeneralTree {
@@ -48,7 +53,7 @@ class GeneralTree {
         this.currentNode = root;
     }
 
-    public String search(TreeNode node) {
+    public TreeNode search(TreeNode node) {
         PriorityQueue<TreeNode> nodeQueue = new PriorityQueue();
         nodeQueue.add(root);
         boolean isFound = false;
@@ -62,15 +67,11 @@ class GeneralTree {
                 nodeQueue.addAll(temp.getChildren());
             }
         } while (!nodeQueue.isEmpty());
-        String path = "";
+        
         if (isFound) {
-            path = "\\" + temp.getFileDescriptor().fileName;
-            while (!temp.equals(root)) {
-                temp = temp.getParent();
-                path = "\\" + temp.getFileDescriptor().fileName;
-            }
+            return temp;
         }
-        return path;
+        return null;
     }
 
     public void insert(TreeNode node) {
@@ -119,10 +120,22 @@ class GeneralTree {
         return null;
     }
 
-//    private TreeNode goToPath(String path){
-//        String tempPath[] = path.split("\\\\");
-//        boolean error = false;
-//    }
+    private void setCurrentNode(TreeNode node){
+        this.currentNode = node;
+        
+    }
+    private void setCurrentNode(String path){
+        
+    }
+    
+    private TreeNode goToPath(String path){
+        if (path.contains("/")) {
+            String tempPath[] = path.split("/");
+            boolean error = false;
+        } else {
+            
+        }
+    }
 }
 
 class Descriptor implements Comparable<Descriptor>{
