@@ -16,6 +16,10 @@ import java.util.Queue;
  */
 public class GeneralTree {
 
+    public static void main(String[] args) {
+        
+    }
+    
     TreeNode root;
     TreeNode currentNode = root;
     int height;
@@ -233,5 +237,14 @@ class TreeNode implements Comparable<TreeNode>{
             return 1;
         }
         return 0;
+    }
+}
+
+class FileSystem{
+    private GeneralTree system;
+    
+    public FileSystem(){
+        TreeNode home = new TreeNode("home");
+        home.getFileDescriptor().isDir = true;
     }
 }
