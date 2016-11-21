@@ -6,6 +6,8 @@ package generaltree;
  * and open the template in the editor.
  */
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.PriorityQueue;
@@ -19,9 +21,12 @@ import java.util.Queue;
 
 public class FileSystem{
     private GeneralTree system;
+    
     public static void main(String[] args) {
-        
+        FileSystem fs = new FileSystem();
+        fs.system.currentNode.getFileDescriptor().displayInfo();
     }
+    
     public FileSystem(){
         TreeNode home = new TreeNode("home");
         home.getFileDescriptor().isDir = true;
@@ -31,7 +36,7 @@ public class FileSystem{
 
 class GeneralTree {
     TreeNode root;
-    TreeNode currentNode = root;
+    TreeNode currentNode;
     int height;
 
     public GeneralTree() {
@@ -40,6 +45,7 @@ class GeneralTree {
 
     public GeneralTree(TreeNode root) {
         this.root = root;
+        this.currentNode = root;
     }
 
     public String search(TreeNode node) {
@@ -139,6 +145,13 @@ class Descriptor implements Comparable<Descriptor>{
         this.setDate();
     }
 
+    public void displayInfo(){
+        DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
+        System.out.println("File Name: "+this.fileName+"."+this.fileType);
+        System.out.println("Date Created"+df.format(dateCreated));
+        System.out.println("Date Modified"+df.format(dateModified));
+    }
+    
     @Override
     public int compareTo(Descriptor o) {
         if (this.isDir == o.isDir && this.fileName == o.fileName && this.fileType == o.fileType) {
@@ -177,7 +190,7 @@ class TreeNode implements Comparable<TreeNode>{
         children = new ArrayList();
     }
     public TreeNode(String name){
-        this.fileDescriptor.fileName = name;
+        this.fileDescriptor = new Descriptor(name,"");
         parent = null;
         this.fileDescriptor.isDir = false;
         content = "";
