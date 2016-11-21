@@ -53,8 +53,14 @@ public class GeneralTree {
         return path;
     }
 
-    public void insert(String path,TreeNode node) {
-        
+    public void insert(TreeNode node) {
+        TreeNode redundantNode = getRedundantNode(node);
+        if (redundantNode==null) {
+            this.currentNode.getChildren().add(node);
+        } else {
+            this.currentNode.getChildren().remove(node);
+            this.currentNode.getChildren().add(node);
+        }
     }
 
     public void delete(TreeNode node){
@@ -65,7 +71,7 @@ public class GeneralTree {
         TreeNode temp;
         do {
             temp = nodeQueue.poll();
-            if (temp.getName().compareTo(node.getName()) == 0) {
+            if (temp.compareTo(node) == 0) {
                 isFound = true;
                 break;
             } else if (!temp.getChildren().isEmpty()) {
@@ -92,11 +98,11 @@ public class GeneralTree {
         }
         return null;
     }
-    
-    private TreeNode goToPath(String path){
-        String tempPath[] = path.split("\\\\");
-        boolean error = false;
-    }
+
+//    private TreeNode goToPath(String path){
+//        String tempPath[] = path.split("\\\\");
+//        boolean error = false;
+//    }
 }
 
 class Descriptor implements Comparable<Descriptor>{
@@ -111,12 +117,12 @@ class Descriptor implements Comparable<Descriptor>{
         this.fileType = "";
         this.fileName = "";
     }
-    
+
     public Descriptor(String fileName,String fileType){
         this.fileName = fileName;
         this.fileType = fileType;
     }
-    
+
     @Override
     public int compareTo(Descriptor o) {
         if (this.isDir == o.isDir && this.fileName == o.fileName && this.fileType == o.fileType) {
@@ -191,7 +197,7 @@ class TreeNode implements Comparable<TreeNode>{
         this.content = content;
     }
 
-    
+
 
     /**
      * @return the children
