@@ -15,12 +15,21 @@ import java.util.Queue;
  *
  * @author user
  */
-public class GeneralTree {
 
+
+public class FileSystem{
+    private GeneralTree system;
     public static void main(String[] args) {
         
     }
-    
+    public FileSystem(){
+        TreeNode home = new TreeNode("home");
+        home.getFileDescriptor().isDir = true;
+        system = new GeneralTree(home);
+    }
+}
+
+class GeneralTree {
     TreeNode root;
     TreeNode currentNode = root;
     int height;
@@ -246,15 +255,5 @@ class TreeNode implements Comparable<TreeNode>{
             return 1;
         }
         return 0;
-    }
-}
-
-class FileSystem{
-    private GeneralTree system;
-    
-    public FileSystem(){
-        TreeNode home = new TreeNode("home");
-        home.getFileDescriptor().isDir = true;
-        system = new GeneralTree(home);
     }
 }
