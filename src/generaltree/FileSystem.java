@@ -5,12 +5,21 @@ package generaltree;
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import javax.swing.*;
+import javax.swing.text.JTextComponent;
+import javax.swing.text.NavigationFilter;
+import javax.swing.text.Position;
 
 /**
  *
@@ -25,6 +34,13 @@ public class FileSystem {
         fs.system.currentNode.getFileDescriptor().displayInfo();
         TreeNode sample = new TreeNode("Sample");
         fs.system.insert(sample);
+        UI ui = new UI();
+        
+        EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                ui.showUI();
+            }
+        });
 
     }
     
@@ -453,5 +469,78 @@ class TreeNode implements Comparable<TreeNode> {
             return 1;
         }
         return 0;
+    }
+}
+
+class UI extends JPanel{
+    public UI(){
+        Color c = new Color(0,0,0);
+        Font f = new Font("Roboto",Font.PLAIN, 13);
+        setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
+        JTextArea textArea = new JTextArea(20, 60);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(false);
+        textArea.setEditable(false);
+        textArea.setFont(f);
+        textArea.setBackground(c);
+        textArea.setForeground(Color.WHITE);
+        JScrollPane scrollPane = new JScrollPane(textArea,
+                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);;
+        //scrollPane.setMaximumSize( scrollPane.getPreferredSize() );
+        JTextField textField = new JTextField("home>>");
+        textField.setNavigationFilter(new NavigationFilterPrefixWithBackspace(5, textField));
+        textField.setBackground(c);
+        textField.setForeground(Color.WHITE);
+        textField.setMaximumSize( 
+                new Dimension(Integer.MAX_VALUE, textField.getPreferredSize().height+1) );
+        textField.setFont(f);
+        textField.setCaretColor(Color.WHITE);
+        add(scrollPane);
+        add(textField);
+    }
+    public static void showUI(){
+        JFrame frame = new JFrame("FileSystem");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.add(new UI());
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+    }
+}
+class NavigationFilterPrefixWithBackspace extends NavigationFilter
+{
+    private int prefixLength;
+    private Action deletePrevious;
+ 
+    public NavigationFilterPrefixWithBackspace(int prefixLength, JTextComponent component)
+    {
+        this.prefixLength = prefixLength;
+        deletePrevious = component.getActionMap().get("delete-previous");
+        component.getActionMap().put("delete-previous", new BackspaceAction());
+        component.setCaretPosition(prefixLength);
+    }
+ 
+    public void setDot(NavigationFilter.FilterBypass fb, int dot, Position.Bias bias)
+    {
+        fb.setDot(Math.max(dot, prefixLength), bias);
+    }
+ 
+    public void moveDot(NavigationFilter.FilterBypass fb, int dot, Position.Bias bias)
+    {
+        fb.moveDot(Math.max(dot, prefixLength), bias);
+    }
+ 
+    class BackspaceAction extends AbstractAction
+    {
+        public void actionPerformed(ActionEvent e)
+        {
+            JTextComponent component = (JTextComponent)e.getSource();
+ 
+            if (component.getCaretPosition() > prefixLength)
+            {
+                deletePrevious.actionPerformed( null );
+            }
+        }
     }
 }
