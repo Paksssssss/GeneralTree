@@ -33,8 +33,22 @@ public class FileSystem{
         system = new GeneralTree(home);
     }
     
-    public void navigate(){
-        
+    public void navigate(String path){
+        if (path.contains("/")) {
+            if (system.goToPath(path)) {
+                System.out.println("Current Node: ");
+                system.currentNode.getFileDescriptor().displayInfo();
+            } else {
+                System.out.println("Path not found!");
+            }
+        } else {
+            if (system.goToLocalPath(path)) {
+                System.out.println("Current Node: ");
+                system.currentNode.getFileDescriptor().displayInfo();
+            } else {
+                System.out.println("Path not found!");
+            }
+        }
     }
     
 }
@@ -140,43 +154,42 @@ class GeneralTree {
         return null;
     }
     
-    private TreeNode goToLocalPath(String path){
+    public boolean goToLocalPath(String path){
         for (TreeNode node:this.currentNode.getChildren()) {
             if (path.equals(node.getFileDescriptor().fileName)) {
-                return node;
+                this.currentNode = node;
+                return true;
             }
         }
-        return null;
+        return false;
     }
     
-    private boolean goToPath(String path){
-        if (path.contains("/")) {
-            String tempPath[] = path.split("/");
-            boolean error;
-            TreeNode temp;
-            int ctr;
-            //still not sure if 1 ba or 0
-            if (path.startsWith("/")) {
-                temp = root;
-                ctr = 2;
-            } else  {
-                temp = currentNode;
-                ctr = 0;
+    public boolean goToPath(String path){
+        String tempPath[] = path.split("/");
+        boolean error;
+        TreeNode temp;
+        int ctr;
+        //still not sure if 1 ba or 0
+        if (path.startsWith("/")) {
+            temp = root;
+            ctr = 2;
+        } else  {
+            temp = currentNode;
+            ctr = 0;
+        }
+        for (; ctr < tempPath.length; ctr++) {
+            error = true;
+            for(TreeNode node : temp.getChildren()){
+                if(node.getFileDescriptor().fileName.equals(tempPath[ctr])){
+                    temp = node;
+                    error = false;
+                } 
             }
-            for (; ctr < tempPath.length; ctr++) {
-                error = true;
-                for(TreeNode node : temp.getChildren()){
-                    if(node.getFileDescriptor().fileName.equals(tempPath[ctr])){
-                        temp = node;
-                        error = false;
-                    } 
-                }
-                if (error) {
-                    return false;
-                }
-                
+            if (error) {
+                return false;
             }
         }
+        this.currentNode = temp;
         return true;
     }
 }
