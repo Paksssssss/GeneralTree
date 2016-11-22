@@ -5,7 +5,6 @@ package generaltree;
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -17,26 +16,56 @@ import java.util.Queue;
  *
  * @author user
  */
+public class FileSystem {
 
-
-public class FileSystem{
     private GeneralTree system;
-    
+
     public static void main(String[] args) {
         FileSystem fs = new FileSystem();
         fs.system.currentNode.getFileDescriptor().displayInfo();
-        TreeNode sample  = new TreeNode("Sample");
+        TreeNode sample = new TreeNode("Sample");
         fs.system.insert(sample);
-        
+
     }
     
-    public FileSystem(){
+
+    public FileSystem() {
         TreeNode home = new TreeNode("home");
         home.getFileDescriptor().isDir = true;
         system = new GeneralTree(home);
     }
     
-    public void navigate(String path){
+    //this parses user input to determine command
+    private void commandListener(String userInput) {
+        
+    }
+
+    public void list(String path){
+        TreeNode tempNode;
+        String tempString[] = path.split("/");
+        if (path.contains("/")) {
+            tempNode = system.currentNode;
+            if (tempNode != null) {
+                system.currentNode = system.goToPath(path);
+                system.insert(new TreeNode(path, true));
+                system.currentNode = tempNode;
+            }
+        } else if (path.isEmpty()) {
+            for (TreeNode node : system.currentNode.getChildren()) {
+                //should print out contents of current directory
+                System.out.print(node.getShortName());
+            }
+        } else {
+            tempNode = this.system.goToLocalPath(path);
+            if (tempNode != null){
+                for (TreeNode node : tempNode.getChildren()) {
+                    System.out.println(node.getShortName());
+                }
+            }
+        }
+    }
+    
+    public void navigate(String path) {
         TreeNode temp;
         if (path.contains("/")) {
             temp = system.goToPath(path);
@@ -58,39 +87,50 @@ public class FileSystem{
             }
         }
     }
-    
-    public void mkdir(String path){
+
+    public void mkdir(String path) {
         TreeNode tempNode;
         String tempString[] = path.split("/");
-        String dirName = tempString[tempString.length-1];
-        String tempPath = path.replace("/"+dirName, "");
+        String dirName = tempString[tempString.length - 1];
+        String tempPath = path.replace("/" + dirName, "");
         if (path.contains("/")) {
-            tempNode = system.currentNode;
-            system.currentNode=system.goToPath(tempPath);
-            system.insert(new TreeNode(path,true));
-            system.currentNode = tempNode;
+            tempNode = system.goToPath(tempPath);
+            if (tempNode != null) {
+                tempNode = system.currentNode;
+                system.currentNode = system.goToPath(tempPath);
+                system.insert(new TreeNode(dirName, true));
+                system.currentNode = tempNode;
+            } else {
+                System.out.println("Invalid path");
+            }
         } else {
-            system.insert(new TreeNode(path,true));
+            system.insert(new TreeNode(path, true));
         }
     }
-    
-    public void rmdir(String path){
+
+    public void rmdir(String path) {
         TreeNode tempNode;
         String tempString[] = path.split("/");
-        String dirName = tempString[tempString.length-1];
-        String tempPath = path.replace("/"+dirName, "");
+        String dirName = tempString[tempString.length - 1];
+        String tempPath = path.replace("/" + dirName, "");
         if (path.contains("/")) {
-            tempNode = system.currentNode;
-            system.currentNode=system.goToPath(tempPath);
-            system.insert(new TreeNode(path,true));
-            system.currentNode = tempNode;
+            tempNode = system.goToPath(tempPath);
+            if (tempNode != null) {
+                tempNode = system.currentNode;
+                system.currentNode = system.goToPath(tempPath);
+                system.delete(new TreeNode(dirName, true));
+                system.currentNode = tempNode;
+            } else {
+                System.out.println("Invalid path");
+            }
         } else {
-            system.delete(new TreeNode(path,true));
+            system.delete(new TreeNode(path, true));
         }
     }
 }
 
 class GeneralTree {
+
     TreeNode root;
     TreeNode currentNode;
     int height;
@@ -118,13 +158,14 @@ class GeneralTree {
                 nodeQueue.addAll(temp.getChildren());
             }
         } while (!nodeQueue.isEmpty());
-        
+
         if (isFound) {
             return temp;
         }
         return null;
     }
-    public TreeNode search(String fileName){
+
+    public TreeNode search(String fileName) {
         PriorityQueue<TreeNode> nodeQueue = new PriorityQueue();
         nodeQueue.add(root);
         boolean isFound = false;
@@ -138,7 +179,7 @@ class GeneralTree {
                 nodeQueue.addAll(temp.getChildren());
             }
         } while (!nodeQueue.isEmpty());
-        
+
         if (isFound) {
             return temp;
         }
@@ -147,7 +188,7 @@ class GeneralTree {
 
     public void insert(TreeNode node) {
         TreeNode redundantNode = getRedundantNode(node);
-        if (redundantNode==null) {
+        if (redundantNode == null) {
             this.currentNode.getChildren().add(node);
         } else {
             System.out.println("OVERWRITING");
@@ -156,7 +197,7 @@ class GeneralTree {
         }
     }
 
-    public void delete(TreeNode node){
+    public void delete(TreeNode node) {
         //this implementation is for delete that looks for the node in all directories
         PriorityQueue<TreeNode> nodeQueue = new PriorityQueue();
         nodeQueue.add(root);
@@ -182,12 +223,12 @@ class GeneralTree {
 //        } 
 
     }
-    
-    private void delete(String name){
+
+    private void delete(String name) {
         TreeNode temp = null;
         boolean found = false;
-        for (TreeNode node:this.currentNode.getChildren()) {
-            if(node.getFileDescriptor().fileName.equals(name)){
+        for (TreeNode node : this.currentNode.getChildren()) {
+            if (node.getFileDescriptor().fileName.equals(name)) {
                 temp = node;
                 found = true;
             }
@@ -197,7 +238,7 @@ class GeneralTree {
         } else {
             System.out.println("Directory not Found");
         }
-        
+
     }
 
     private TreeNode getRedundantNode(TreeNode node) {
@@ -208,17 +249,17 @@ class GeneralTree {
         }
         return null;
     }
-    
-    public TreeNode goToLocalPath(String path){
-        for (TreeNode node:this.currentNode.getChildren()) {
+
+    public TreeNode goToLocalPath(String path) {
+        for (TreeNode node : this.currentNode.getChildren()) {
             if (path.equals(node.getFileDescriptor().fileName)) {
                 return node;
             }
         }
         return null;
     }
-    
-    public TreeNode goToPath(String path){
+
+    public TreeNode goToPath(String path) {
         String tempPath[] = path.split("/");
         boolean error;
         TreeNode temp;
@@ -227,17 +268,17 @@ class GeneralTree {
         if (path.startsWith("/")) {
             temp = root;
             ctr = 2;
-        } else  {
+        } else {
             temp = currentNode;
             ctr = 0;
         }
         for (; ctr < tempPath.length; ctr++) {
             error = true;
-            for(TreeNode node : temp.getChildren()){
-                if(node.getFileDescriptor().fileName.equals(tempPath[ctr])){
+            for (TreeNode node : temp.getChildren()) {
+                if (node.getFileDescriptor().fileName.equals(tempPath[ctr])) {
                     temp = node;
                     error = false;
-                } 
+                }
             }
             if (error) {
                 return null;
@@ -247,33 +288,34 @@ class GeneralTree {
     }
 }
 
-class Descriptor implements Comparable<Descriptor>{
+class Descriptor implements Comparable<Descriptor> {
+
     boolean isDir;
     String fileType;
     String fileName;
     Date dateCreated;
     Date dateModified;
 
-    public Descriptor(){
+    public Descriptor() {
         this.isDir = false;
         this.fileType = "";
         this.fileName = "";
         this.setDate();
     }
 
-    public Descriptor(String fileName,String fileType){
+    public Descriptor(String fileName, String fileType) {
         this.fileName = fileName;
         this.fileType = fileType;
         this.setDate();
     }
 
-    public void displayInfo(){
+    public void displayInfo() {
         DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
-        System.out.println("File Name: "+this.fileName+this.fileType);
-        System.out.println("Date Created"+df.format(dateCreated));
-        System.out.println("Date Modified"+df.format(dateModified));
+        System.out.println("File Name: " + this.fileName + this.fileType);
+        System.out.println("Date Created" + df.format(dateCreated));
+        System.out.println("Date Modified" + df.format(dateModified));
     }
-    
+
     @Override
     public int compareTo(Descriptor o) {
         if (this.isDir == o.isDir && this.fileName == o.fileName && this.fileType == o.fileType) {
@@ -281,57 +323,71 @@ class Descriptor implements Comparable<Descriptor>{
         }
         return 0;
     }
-    
-    private void setDate(){
+
+    private void setDate() {
         this.dateCreated = new Date();
         this.dateModified = new Date();
     }
 }
 
-class TreeNode implements Comparable<TreeNode>{
+class TreeNode implements Comparable<TreeNode> {
+
     private TreeNode parent;
     private String content;
     private Descriptor fileDescriptor;
     private ArrayList<TreeNode> children;
-    public TreeNode(){
+
+    public TreeNode() {
         parent = null;
         content = "";
         children = new ArrayList();
     }
-    public TreeNode(TreeNode parent){
+
+    public TreeNode(TreeNode parent) {
         this.parent = parent;
         this.fileDescriptor.isDir = false;
         content = "";
         children = new ArrayList();
     }
-    public TreeNode(String name, TreeNode parent){
+
+    public TreeNode(String name, TreeNode parent) {
         this.fileDescriptor.fileName = name;
         this.parent = parent;
         this.fileDescriptor.isDir = false;
         content = "";
         children = new ArrayList();
     }
-    public TreeNode(String name){
-        this.fileDescriptor = new Descriptor(name,"");
+
+    public TreeNode(String name) {
+        this.fileDescriptor = new Descriptor(name, "");
         parent = null;
         this.fileDescriptor.isDir = false;
         content = "";
         children = new ArrayList();
     }
-    public TreeNode(String name, boolean isDir){
-        this.fileDescriptor = new Descriptor(name,"");
+
+    public TreeNode(String name, boolean isDir) {
+        this.fileDescriptor = new Descriptor(name, "");
         parent = null;
         this.fileDescriptor.isDir = isDir;
         content = "";
         children = new ArrayList();
     }
-    public TreeNode(TreeNode parent, ArrayList<TreeNode> children){
+
+    public TreeNode(TreeNode parent, ArrayList<TreeNode> children) {
         this.parent = parent;
         this.children = children;
         content = "";
         this.fileDescriptor.isDir = true;
     }
-    
+
+    public String getShortName(){
+        if (this.fileDescriptor.isDir||this.fileDescriptor.fileType.isEmpty()) {
+            return this.fileDescriptor.fileName;
+        } else {
+            return this.fileDescriptor.fileName + "." +this.fileDescriptor.fileType;
+        }
+    }
     
     /**
      * @return the parent
@@ -360,8 +416,6 @@ class TreeNode implements Comparable<TreeNode>{
     public void setContent(String content) {
         this.content = content;
     }
-
-
 
     /**
      * @return the children
@@ -393,7 +447,7 @@ class TreeNode implements Comparable<TreeNode>{
 
     @Override
     public int compareTo(TreeNode node) {
-        if (this.parent.compareTo(node.getParent())==1 && this.fileDescriptor.compareTo(node.getFileDescriptor())==1 && this.children.equals(node.getChildren())) {
+        if (this.parent.compareTo(node.getParent()) == 1 && this.fileDescriptor.compareTo(node.getFileDescriptor()) == 1 && this.children.equals(node.getChildren())) {
             return 1;
         }
         return 0;
