@@ -42,13 +42,15 @@ public class FileSystem {
 
     public void list(String path){
         TreeNode tempNode;
-        String tempString[] = path.split("/");
         if (path.contains("/")) {
-            tempNode = system.currentNode;
+            tempNode = system.goToPath(path);
             if (tempNode != null) {
-                system.currentNode = system.goToPath(path);
-                system.insert(new TreeNode(path, true));
-                system.currentNode = tempNode;
+                for (TreeNode node : tempNode.getChildren()) {
+                    //should print out contents of current directory
+                    System.out.print(node.getShortName());
+                }
+            } else {
+                System.out.println("Invalid path");
             }
         } else if (path.isEmpty()) {
             for (TreeNode node : system.currentNode.getChildren()) {
