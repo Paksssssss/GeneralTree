@@ -73,6 +73,26 @@ class GeneralTree {
         }
         return null;
     }
+    public TreeNode search(String fileName){
+        PriorityQueue<TreeNode> nodeQueue = new PriorityQueue();
+        nodeQueue.add(root);
+        boolean isFound = false;
+        TreeNode temp;
+        do {
+            temp = nodeQueue.poll();
+            if (temp.getFileDescriptor().fileName.equals(fileName)) {
+                isFound = true;
+                break;
+            } else if (!temp.getChildren().isEmpty()) {
+                nodeQueue.addAll(temp.getChildren());
+            }
+        } while (!nodeQueue.isEmpty());
+        
+        if (isFound) {
+            return temp;
+        }
+        return null;
+    }
 
     public void insert(TreeNode node) {
         TreeNode redundantNode = getRedundantNode(node);
@@ -119,22 +139,45 @@ class GeneralTree {
         }
         return null;
     }
-
-    private void setCurrentNode(TreeNode node){
-        this.currentNode = node;
-        
-    }
-    private void setCurrentNode(String path){
-        
+    
+    private TreeNode goToLocalPath(String path){
+        for (TreeNode node:this.currentNode.getChildren()) {
+            if (path.equals(node.getFileDescriptor().fileName)) {
+                return node;
+            }
+        }
+        return null;
     }
     
-    private TreeNode goToPath(String path){
+    private boolean goToPath(String path){
         if (path.contains("/")) {
             String tempPath[] = path.split("/");
-            boolean error = false;
-        } else {
-            
+            boolean error;
+            TreeNode temp;
+            int ctr;
+            //still not sure if 1 ba or 0
+            if (path.startsWith("/")) {
+                temp = root;
+                ctr = 2;
+            } else  {
+                temp = currentNode;
+                ctr = 0;
+            }
+            for (; ctr < tempPath.length; ctr++) {
+                error = true;
+                for(TreeNode node : temp.getChildren()){
+                    if(node.getFileDescriptor().fileName.equals(tempPath[ctr])){
+                        temp = node;
+                        error = false;
+                    } 
+                }
+                if (error) {
+                    return false;
+                }
+                
+            }
         }
+        return true;
     }
 }
 
