@@ -28,17 +28,19 @@ import javax.swing.text.Position;
 public class FileSystem {
 
     private GeneralTree system;
+    JTextField textField;
+    JTextArea textArea;
+    JPanel panel;
 
     public static void main(String[] args) {
         FileSystem fs = new FileSystem();
         fs.system.currentNode.getFileDescriptor().displayInfo();
         TreeNode sample = new TreeNode("Sample");
         fs.system.insert(sample);
-        UI ui = new UI();
         
         EventQueue.invokeLater(new Runnable() {
             public void run() {
-                ui.showUI();
+                showUI(fs);
             }
         });
 
@@ -48,12 +50,75 @@ public class FileSystem {
     public FileSystem() {
         TreeNode home = new TreeNode("home");
         home.getFileDescriptor().isDir = true;
-        system = new GeneralTree(home);
+        system = new GeneralTree(home);Color c = new Color(0,0,0);
+        panel = new JPanel();
+        Font f = new Font("Roboto",Font.PLAIN, 13);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
+        textArea = new JTextArea(20, 60);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(false);
+        textArea.setEditable(false);
+        textArea.setFont(f);
+        textArea.setBackground(c);
+        textArea.setForeground(Color.WHITE);
+        JScrollPane scrollPane = new JScrollPane(textArea,
+                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);;
+        //scrollPane.setMaximumSize( scrollPane.getPreferredSize() );
+        
+        Action action = new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                commandListener();
+            }
+        };
+        textField = new JTextField("home>");
+        textField.setNavigationFilter(new NavigationFilterPrefixWithBackspace(5, textField));
+        textField.setBackground(c);
+        textField.setForeground(Color.WHITE);
+        textField.setMaximumSize( 
+                new Dimension(Integer.MAX_VALUE, textField.getPreferredSize().height+1) );
+        textField.setFont(f);
+        textField.setCaretColor(Color.WHITE);
+        textField.addActionListener(action);
+        panel.add(scrollPane);
+        panel.add(textField);
+    }
+    public static void showUI(FileSystem fs){
+        JFrame frame = new JFrame("FileSystem");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.add(fs.panel);
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
     }
     
     //this parses user input to determine command
-    private void commandListener(String userInput) {
-        
+    private void commandListener() {
+        String userInput = textField.getText();
+        String neededInput = userInput.split(">")[1];
+        String parsedNeededInput[] = neededInput.split("\\s+");
+        String command, actualInput;
+        if (parsedNeededInput[0].isEmpty()) {
+            command = parsedNeededInput[1].replaceAll("\\s+", "");
+            actualInput =  parsedNeededInput[2];
+        } else {
+            command = parsedNeededInput[0].replaceAll("\\s+", "");
+            actualInput = parsedNeededInput[1];
+        }
+        if (command.equals("mkdir")) {
+            System.out.println("");
+        } else if (command.equals("rmdir")) {
+            
+        } else if (command.equals("cd")) {
+            
+        } else if (command.equals("ls")) {
+            
+        } else if (command.equals("whereis")) {
+            
+        }
     }
 
     public void list(String path){
@@ -75,9 +140,25 @@ public class FileSystem {
             }
         } else {
             tempNode = this.system.goToLocalPath(path);
+            boolean hasSuf = false;
+            String suffix = "";
+            if (path.startsWith("*")) {
+                hasSuf = true;
+                if (path.length()==1) {
+                    suffix = "";
+                } else  {
+                    suffix = path.substring(1);
+                }
+            }
             if (tempNode != null){
                 for (TreeNode node : tempNode.getChildren()) {
-                    System.out.println(node.getShortName());
+                    if (hasSuf) {
+                        if (node.getShortName().endsWith(suffix)) {
+                            System.out.println(node.getShortName());
+                        }
+                    } else {
+                        System.out.println(node.getShortName());
+                    }
                 }
             }
         }
@@ -104,6 +185,7 @@ public class FileSystem {
                 System.out.println("Path not found!");
             }
         }
+        this.system.setPathToCurrent();
     }
 
     public void mkdir(String path) {
@@ -118,6 +200,7 @@ public class FileSystem {
                 system.currentNode = system.goToPath(tempPath);
                 system.insert(new TreeNode(dirName, true));
                 system.currentNode = tempNode;
+                textArea.setText(textArea.getText().concat(system.pathToCurrent+"Directory Created."));
             } else {
                 System.out.println("Invalid path");
             }
@@ -134,6 +217,10 @@ public class FileSystem {
         if (path.contains("/")) {
             tempNode = system.goToPath(tempPath);
             if (tempNode != null) {
+                if (tempNode.compareTo(tempNode)==1) {
+                    System.out.println("Directory in use");
+                    return;
+                }
                 tempNode = system.currentNode;
                 system.currentNode = system.goToPath(tempPath);
                 system.delete(new TreeNode(dirName, true));
@@ -152,7 +239,8 @@ class GeneralTree {
     TreeNode root;
     TreeNode currentNode;
     int height;
-
+    String pathToCurrent;
+    
     public GeneralTree() {
         root = null;
     }
@@ -160,6 +248,19 @@ class GeneralTree {
     public GeneralTree(TreeNode root) {
         this.root = root;
         this.currentNode = root;
+        this.pathToCurrent = "";
+    }
+    
+    public void setPathToCurrent(){
+        if(currentNode.compareTo(root) == 1){
+            pathToCurrent = "/"+root.getShortName();
+        } else {
+            TreeNode temp = currentNode;
+            pathToCurrent = "";
+            while(currentNode.compareTo(root) == 0){
+                pathToCurrent =  "/"+currentNode.getShortName() + pathToCurrent;
+            }
+        }
     }
 
     public TreeNode search(TreeNode node) {
@@ -270,7 +371,7 @@ class GeneralTree {
 
     public TreeNode goToLocalPath(String path) {
         for (TreeNode node : this.currentNode.getChildren()) {
-            if (path.equals(node.getFileDescriptor().fileName)) {
+            if (node.getFileDescriptor().fileName.matches(path)) {
                 return node;
             }
         }
@@ -472,42 +573,6 @@ class TreeNode implements Comparable<TreeNode> {
     }
 }
 
-class UI extends JPanel{
-    public UI(){
-        Color c = new Color(0,0,0);
-        Font f = new Font("Roboto",Font.PLAIN, 13);
-        setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
-        JTextArea textArea = new JTextArea(20, 60);
-        textArea.setLineWrap(true);
-        textArea.setWrapStyleWord(false);
-        textArea.setEditable(false);
-        textArea.setFont(f);
-        textArea.setBackground(c);
-        textArea.setForeground(Color.WHITE);
-        JScrollPane scrollPane = new JScrollPane(textArea,
-                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);;
-        //scrollPane.setMaximumSize( scrollPane.getPreferredSize() );
-        JTextField textField = new JTextField("home>>");
-        textField.setNavigationFilter(new NavigationFilterPrefixWithBackspace(5, textField));
-        textField.setBackground(c);
-        textField.setForeground(Color.WHITE);
-        textField.setMaximumSize( 
-                new Dimension(Integer.MAX_VALUE, textField.getPreferredSize().height+1) );
-        textField.setFont(f);
-        textField.setCaretColor(Color.WHITE);
-        add(scrollPane);
-        add(textField);
-    }
-    public static void showUI(){
-        JFrame frame = new JFrame("FileSystem");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.add(new UI());
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
-    }
-}
 class NavigationFilterPrefixWithBackspace extends NavigationFilter
 {
     private int prefixLength;
