@@ -38,7 +38,6 @@ public class FileSystem {
     Action action;
     static JFrame frame;
     String textAreaLogs;
-    Action editorAction = null;
 
     public static void main(String[] args) {
         FileSystem fs = new FileSystem();
@@ -111,17 +110,21 @@ public class FileSystem {
         String userInput = textField.getText();
         String neededInput = userInput.split(">")[1];
         String parsedNeededInput[] = neededInput.split("\\s+");
-        String command, actualInput = "";
+        String command = "", actualInput = "", otherInput = "";
         textField.setText(system.pathToCurrent + ">");
-        if (parsedNeededInput[0].isEmpty() && parsedNeededInput.length == 3) {
+        if (parsedNeededInput[0].isEmpty() && parsedNeededInput.length>0) {
             command = parsedNeededInput[1].replaceAll("\\s+", "");
             actualInput = parsedNeededInput[2];
         } else if (parsedNeededInput.length == 1) {
             command = parsedNeededInput[0].replaceAll("\\s+", "");
-        } else {
+        } else if (parsedNeededInput.length == 2){
             command = parsedNeededInput[0].replaceAll("\\s+", "");
             actualInput = parsedNeededInput[1];
-        }
+        }else if (parsedNeededInput.length == 3){
+            command = parsedNeededInput[0].replaceAll("\\s+", "");
+            actualInput = parsedNeededInput[1];
+            otherInput =  parsedNeededInput[2];
+        } 
         textArea.setText(textArea.getText().concat(userInput + "\n"));
         if (command.equals("mkdir")) {
             if (actualInput.isEmpty()) {
@@ -140,18 +143,97 @@ public class FileSystem {
                 actualInput = "";
             }
             this.navigate(actualInput);
-
         } else if (command.equals("ls")) {
             this.list(actualInput);
         } else if (command.equals("whereis")) {
 
         } else if (command.equals("edit")) {
-            textField.addActionListener(action);
-        } else {
+            
+        } else if (command.equals("rn")){
+            this.rename(actualInput,otherInput);
+        } else if (command.equals("rm")) {
+            this.deleteFile(actualInput);
+        }
+        else {
             textArea.setText(textArea.getText().concat(">" + command + "\nCommand '" + command + "' not found.\n"));
         }
     }
-
+    
+    public void move(String fileName, String path){
+        
+    }
+    
+    public void rename(String original, String newName){
+        TreeNode temp = system.goToLocalPath(original);
+        if (temp!=null) {
+            if(newName.contains(".")){
+                String parsedName[] = newName.split(".");
+                temp.getFileDescriptor().fileName = parsedName[0];
+                temp.getFileDescriptor().fileType =  parsedName[1];
+                temp.getFileDescriptor().setDate();
+                textArea.setText(textArea.getText().concat(">"+original+" renamed to "+ newName));
+            } else {
+                temp.getFileDescriptor().fileName = newName;
+                temp.getFileDescriptor().setDate();
+                textArea.setText(textArea.getText().concat(">"+original+" renamed to "+ newName));
+            }
+        } else {
+            textArea.setText(textArea.getText().concat(">"+original+" not found"));
+        }
+    }
+    
+    public void deleteFile(String path){
+        TreeNode tempNode1, tempNode2;
+        String tempString[] = path.split("/");
+        String dirName = tempString[tempString.length - 1];
+        if (path.contains("/")) {
+            tempNode1 = system.goToPath(path);
+            if (tempNode1 != null) {
+                if (!tempNode1.getFileDescriptor().isDir) {
+                    tempNode2 = tempNode1.getParent();
+                    tempNode1 = system.currentNode;
+                    system.currentNode = tempNode2;
+                    system.delete(system.goToLocalPath(dirName));
+                    system.currentNode = tempNode1;
+                    textArea.setText(textArea.getText().concat(">File: '" + dirName + "' deleted.\n"));
+                }
+                else {
+                    textArea.setText(textArea.getText().concat(">File: '" + dirName + "' is a Directory.\n"));
+                }
+            } else {
+                textArea.setText(textArea.getText().concat("Path '" + path + "' not found.\n"));
+            }
+        } else {
+            String suffix;
+            if (path.startsWith("*")) {
+                ArrayList<TreeNode> toDelete = new ArrayList();
+                if (path.length() == 1) {
+                    suffix = "";
+                } else {
+                    suffix = path.substring(1);
+                }
+                for (TreeNode node : system.currentNode.getChildren()) {
+                    System.out.println(node.getShortName());
+                    if (node.getShortName().endsWith(suffix)) {
+                        toDelete.add(node);
+                    }
+                }
+                for (TreeNode node : toDelete) {
+                    system.delete(node);
+                    textArea.setText(textArea.getText().concat(">File: '" + node.getShortName() + "' deleted.\n"));
+                }
+            } else {
+                tempNode1 = this.system.goToLocalPath(path);
+                if (tempNode1 != null) {
+                    system.delete(tempNode1);
+                    textArea.setText(textArea.getText().concat(">File: '" + path + "' deleted.\n"));
+                }else {
+                    textArea.setText(textArea.getText().concat("File '" + path + "' not found.\n"));
+                }
+            }
+        }
+    }
+    
     public void list(String path) {
         TreeNode tempNode;
         if (path.contains("/")) {
@@ -483,6 +565,8 @@ class Descriptor implements Comparable<Descriptor> {
     public Descriptor(String fileName, String fileType) {
         this.fileName = fileName;
         this.fileType = fileType;
+        this.dateCreated = new Date();
+        setDate();
     }
 
     @Override
