@@ -38,6 +38,7 @@ public class FileSystem {
     Action action;
     static JFrame frame;
     String textAreaLogs;
+    NavigationFilterPrefixWithBackspace nf;
 
     public static void main(String[] args) {
         FileSystem fs = new FileSystem();
@@ -78,8 +79,9 @@ public class FileSystem {
                 commandListener();
             }
         };
+        
         textField = new JTextField("/home>");
-        textField.setNavigationFilter(new NavigationFilterPrefixWithBackspace(6, textField));
+        textField.setNavigationFilter(nf);
         textField.setBackground(c);
         textField.setForeground(Color.WHITE);
         textField.setMaximumSize(
@@ -87,6 +89,7 @@ public class FileSystem {
         textField.setFont(f);
         textField.setCaretColor(Color.WHITE);
         textField.addActionListener(action);
+        nf = new NavigationFilterPrefixWithBackspace(6, textField);
         frame = new JFrame("FileSystem");
         frame.addWindowListener(new WindowAdapter() {
             public void windowOpened(WindowEvent e) {
@@ -146,25 +149,60 @@ public class FileSystem {
         } else if (command.equals("ls")) {
             this.list(actualInput);
         } else if (command.equals("whereis")) {
-
+            this.whereIs(actualInput);
         } else if (command.equals("edit")) {
 
         } else if (command.equals("rn")) {
             this.rename(actualInput, otherInput);
         } else if (command.equals("rm")) {
             this.deleteFile(actualInput);
+        } else if (command.equals("mv")) {
+            this.move(actualInput, otherInput);
         } else {
             textArea.setText(textArea.getText().concat(">" + command + "\nCommand '" + command + "' not found.\n"));
         }
     }
 
     public void move(String fileName, String path) {
+        TreeNode tempNode = system.goToLocalPath(fileName);
+        if (tempNode != null) {
+            TreeNode tempNode2 = system.goToPath(path), tmp;
+            if (tempNode2 != null) {
+                if (!tempNode2.getFileDescriptor().isDir) {
+                    tmp = system.currentNode;
+                    system.currentNode = tempNode2;
+                    system.insert(tempNode);
+                    system.currentNode = tmp;
+                    system.delete(tempNode);
+                } else {
+                    textArea.setText(textArea.getText().concat(">" + path + " is not a directory."));
+                }
+            } else {
+                textArea.setText(textArea.getText().concat(">" + path + " does not exist."));
+            }
+        } else {
+            textArea.setText(textArea.getText().concat(">" + fileName + " does not exist."));
+        }
+    }
 
+    public void whereIs(String fileName) {
+        TreeNode tempNode;
+        PriorityQueue<TreeNode> files = new PriorityQueue();
+        ArrayList<TreeNode> hits = new ArrayList();
+        files.add(system.root);
+        while (!files.isEmpty()) {
+            tempNode = files.poll();
+            System.out.println(tempNode.getShortName());
+            if (tempNode.getShortName().equals(fileName)) {
+                textArea.setText(textArea.getText().concat(">" + system.returnPath(tempNode) + "\n"));
+            }
+            files.addAll(tempNode.getChildren());
+        }
     }
 
     public void rename(String original, String newName) {
         if (system.goToLocalPath(newName) != null) {
-            textArea.setText(textArea.getText().concat(">" + newName + " already exists."));
+            textArea.setText(textArea.getText().concat(">" + newName + " already exists.\n"));
         }
         TreeNode temp = system.goToLocalPath(original);
         if (temp != null) {
@@ -173,14 +211,14 @@ public class FileSystem {
                 temp.getFileDescriptor().fileName = parsedName[0];
                 temp.getFileDescriptor().fileType = parsedName[1];
                 temp.getFileDescriptor().setDate();
-                textArea.setText(textArea.getText().concat(">" + original + " renamed to " + newName));
+                textArea.setText(textArea.getText().concat(">" + original + " renamed to " + newName + "\n"));
             } else {
                 temp.getFileDescriptor().fileName = newName;
                 temp.getFileDescriptor().setDate();
-                textArea.setText(textArea.getText().concat(">" + original + " renamed to " + newName));
+                textArea.setText(textArea.getText().concat(">" + original + " renamed to " + newName + "\n"));
             }
         } else {
-            textArea.setText(textArea.getText().concat(">" + original + " not found"));
+            textArea.setText(textArea.getText().concat(">" + original + " not found\n"));
         }
     }
 
@@ -226,8 +264,12 @@ public class FileSystem {
             } else {
                 tempNode1 = this.system.goToLocalPath(path);
                 if (tempNode1 != null) {
-                    system.delete(tempNode1);
-                    textArea.setText(textArea.getText().concat(">File: '" + path + "' deleted.\n"));
+                    if (tempNode1.getFileDescriptor().isDir) {
+                        textArea.setText(textArea.getText().concat(">File: '" + path + "' is a Directory.\n"));
+                    } else {
+                        system.delete(tempNode1);
+                        textArea.setText(textArea.getText().concat(">File: '" + path + "' deleted.\n"));
+                    }
                 } else {
                     textArea.setText(textArea.getText().concat("File '" + path + "' not found.\n"));
                 }
@@ -283,23 +325,33 @@ public class FileSystem {
         if (path.contains("/")) {
             temp = system.goToPath(path);
             if (temp != null) {
-                system.currentNode = temp;
+                if (!temp.getFileDescriptor().isDir) {
+                    system.currentNode = temp;
+                } else  {
+                    textArea.setText(textArea.getText().concat(">" + temp.getShortName() +" is not a Directory.\n"));
+                }
             } else {
-                System.out.println("Path not found!");
+                textArea.setText(textArea.getText().concat(">" + path +" not found.\n"));
             }
         } else if (path.isEmpty()) {
             system.currentNode = system.root;
         } else {
             temp = system.goToLocalPath(path);
             if (temp != null) {
-                system.currentNode = temp;
-            } else {
-                System.out.println("Path not found!");
+                if (temp.getFileDescriptor().isDir) {
+                    system.currentNode = temp;
+                } else  {
+                    textArea.setText(textArea.getText().concat(">" + temp.getShortName() +" is not a Directory.\n"));
+                }
+            } else { 
+                textArea.setText(textArea.getText().concat(">" + path +" not found.\n"));
+       
             }
         }
-        this.system.setPathToCurrent();
-        textField.setText(this.system.pathToCurrent + ">");
-        textField.setNavigationFilter(new NavigationFilterPrefixWithBackspace(system.pathToCurrent.length() + 1, textField));
+        system.setPathToCurrent();
+        System.out.println(system.pathToCurrent);
+        nf.prefixLength = system.pathToCurrent.length()+1;
+        textField.setText(system.pathToCurrent+">");
     }
 
     public void mkdir(String path) {
@@ -550,6 +602,16 @@ class GeneralTree {
         }
         return temp;
     }
+
+    public String returnPath(TreeNode node) {
+        String path = "";
+        TreeNode temp = node;
+        do {
+            path = "/" + temp.getShortName() + path;
+            temp = temp.getParent();
+        } while (temp.compareTo(root) == 0);
+        return path;
+    }
 }
 
 class Descriptor implements Comparable<Descriptor> {
@@ -648,8 +710,12 @@ class TreeNode implements Comparable<TreeNode> {
     }
 
     public String getDesc() {
+        if (this.getFileDescriptor().isDir) {
+            return "\n" + getShortName() + "\nDate Created: " + this.getFileDescriptor().dateCreated + "\nDate Modified: "
+                    + this.getFileDescriptor().dateModified + "\n" + "DIR\n";
+        }
         return "\n" + getShortName() + "\nDate Created: " + this.getFileDescriptor().dateCreated + "\nDate Modified: "
-                + this.getFileDescriptor().dateModified + "\n";
+                + this.getFileDescriptor().dateModified + "\n" + "FILE\n";
     }
 
     /**
@@ -721,7 +787,7 @@ class TreeNode implements Comparable<TreeNode> {
 
 class NavigationFilterPrefixWithBackspace extends NavigationFilter {
 
-    private int prefixLength;
+    public int prefixLength;
     private Action deletePrevious;
 
     public NavigationFilterPrefixWithBackspace(int prefixLength, JTextComponent component) {
@@ -743,10 +809,10 @@ class NavigationFilterPrefixWithBackspace extends NavigationFilter {
 
         public void actionPerformed(ActionEvent e) {
             JTextComponent component = (JTextComponent) e.getSource();
-
             if (component.getCaretPosition() > prefixLength) {
                 deletePrevious.actionPerformed(e);
             }
         }
     }
+    
 }
