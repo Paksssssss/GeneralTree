@@ -462,7 +462,7 @@ public class FileSystem {
         if (path.contains("/")) {
             temp = system.goToPath(path);
             if (temp != null) {
-                if (!temp.getFileDescriptor().isDir) {
+                if (temp.getFileDescriptor().isDir) {
                     system.currentNode = temp;
                 } else {
                     textArea.setText(textArea.getText().concat(">" + temp.getShortName() + " is not a Directory.\n"));
