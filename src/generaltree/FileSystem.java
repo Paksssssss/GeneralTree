@@ -112,19 +112,19 @@ public class FileSystem {
         String parsedNeededInput[] = neededInput.split("\\s+");
         String command = "", actualInput = "", otherInput = "";
         textField.setText(system.pathToCurrent + ">");
-        if (parsedNeededInput[0].isEmpty() && parsedNeededInput.length>0) {
+        if (parsedNeededInput[0].isEmpty() && parsedNeededInput.length > 0) {
             command = parsedNeededInput[1].replaceAll("\\s+", "");
             actualInput = parsedNeededInput[2];
         } else if (parsedNeededInput.length == 1) {
             command = parsedNeededInput[0].replaceAll("\\s+", "");
-        } else if (parsedNeededInput.length == 2){
+        } else if (parsedNeededInput.length == 2) {
             command = parsedNeededInput[0].replaceAll("\\s+", "");
             actualInput = parsedNeededInput[1];
-        }else if (parsedNeededInput.length == 3){
+        } else if (parsedNeededInput.length == 3) {
             command = parsedNeededInput[0].replaceAll("\\s+", "");
             actualInput = parsedNeededInput[1];
-            otherInput =  parsedNeededInput[2];
-        } 
+            otherInput = parsedNeededInput[2];
+        }
         textArea.setText(textArea.getText().concat(userInput + "\n"));
         if (command.equals("mkdir")) {
             if (actualInput.isEmpty()) {
@@ -148,41 +148,43 @@ public class FileSystem {
         } else if (command.equals("whereis")) {
 
         } else if (command.equals("edit")) {
-            
-        } else if (command.equals("rn")){
-            this.rename(actualInput,otherInput);
+
+        } else if (command.equals("rn")) {
+            this.rename(actualInput, otherInput);
         } else if (command.equals("rm")) {
             this.deleteFile(actualInput);
-        }
-        else {
+        } else {
             textArea.setText(textArea.getText().concat(">" + command + "\nCommand '" + command + "' not found.\n"));
         }
     }
-    
-    public void move(String fileName, String path){
-        
+
+    public void move(String fileName, String path) {
+
     }
-    
-    public void rename(String original, String newName){
+
+    public void rename(String original, String newName) {
+        if (system.goToLocalPath(newName) != null) {
+            textArea.setText(textArea.getText().concat(">" + newName + " already exists."));
+        }
         TreeNode temp = system.goToLocalPath(original);
-        if (temp!=null) {
-            if(newName.contains(".")){
+        if (temp != null) {
+            if (newName.contains(".")) {
                 String parsedName[] = newName.split(".");
                 temp.getFileDescriptor().fileName = parsedName[0];
-                temp.getFileDescriptor().fileType =  parsedName[1];
+                temp.getFileDescriptor().fileType = parsedName[1];
                 temp.getFileDescriptor().setDate();
-                textArea.setText(textArea.getText().concat(">"+original+" renamed to "+ newName));
+                textArea.setText(textArea.getText().concat(">" + original + " renamed to " + newName));
             } else {
                 temp.getFileDescriptor().fileName = newName;
                 temp.getFileDescriptor().setDate();
-                textArea.setText(textArea.getText().concat(">"+original+" renamed to "+ newName));
+                textArea.setText(textArea.getText().concat(">" + original + " renamed to " + newName));
             }
         } else {
-            textArea.setText(textArea.getText().concat(">"+original+" not found"));
+            textArea.setText(textArea.getText().concat(">" + original + " not found"));
         }
     }
-    
-    public void deleteFile(String path){
+
+    public void deleteFile(String path) {
         TreeNode tempNode1, tempNode2;
         String tempString[] = path.split("/");
         String dirName = tempString[tempString.length - 1];
@@ -196,8 +198,7 @@ public class FileSystem {
                     system.delete(system.goToLocalPath(dirName));
                     system.currentNode = tempNode1;
                     textArea.setText(textArea.getText().concat(">File: '" + dirName + "' deleted.\n"));
-                }
-                else {
+                } else {
                     textArea.setText(textArea.getText().concat(">File: '" + dirName + "' is a Directory.\n"));
                 }
             } else {
@@ -227,13 +228,13 @@ public class FileSystem {
                 if (tempNode1 != null) {
                     system.delete(tempNode1);
                     textArea.setText(textArea.getText().concat(">File: '" + path + "' deleted.\n"));
-                }else {
+                } else {
                     textArea.setText(textArea.getText().concat("File '" + path + "' not found.\n"));
                 }
             }
         }
     }
-    
+
     public void list(String path) {
         TreeNode tempNode;
         if (path.contains("/")) {
@@ -335,29 +336,34 @@ public class FileSystem {
     }
 
     public void rmdir(String path) {
-        TreeNode tempNode;
+        TreeNode tempNode, tempNode2;
         String tempString[] = path.split("/");
         String dirName = tempString[tempString.length - 1];
         String tempPath = path.replace("/" + dirName, "");
         if (path.contains("/")) {
-            tempNode = system.goToPath(tempPath);
-            if (tempNode != null) {
-                if (tempNode.compareTo(tempNode) == 1) {
+            tempNode = system.goToPath(path);
+            if (!tempNode.getFileDescriptor().isDir) {
+                textArea.setText(textArea.getText().concat(">" + dirName + " is not a directory. You can use rm to delete files.\n"));
+            } else if (tempNode != null) {
+                if (tempNode.compareTo(system.currentNode) == 1) {
                     textArea.setText(textArea.getText().concat(">Directory in use.\n"));
-                    return;
+                } else {
+                    tempNode2 = system.currentNode;
+                    system.currentNode = tempNode.getParent();
+                    system.delete(tempNode);
+                    system.currentNode = tempNode2;
+                    textArea.setText(textArea.getText().concat(">Directory Deleted.\n"));
                 }
-                tempNode = system.currentNode;
-                system.currentNode = system.goToPath(tempPath);
-                system.delete(new TreeNode(dirName, true));
-                system.currentNode = tempNode;
-                textArea.setText(textArea.getText().concat(">Directory Deleted.\n"));
+
             } else {
                 textArea.setText(textArea.getText().concat(">" + path + " not found.\n"));
             }
         } else {
             tempNode = system.goToLocalPath(tempPath);
-            if (tempNode != null) {
-                system.delete(new TreeNode(path, true));
+            if (!tempNode.getFileDescriptor().isDir) {
+                textArea.setText(textArea.getText().concat(">" + dirName + " is not a directory. You can use rm to delete files.\n"));
+            } else if (tempNode != null) {
+                system.delete(tempNode);
                 textArea.setText(textArea.getText().concat(">Directory Deleted.\n"));
             } else {
                 textArea.setText(textArea.getText().concat(">" + path + " not found.\n"));
@@ -626,9 +632,7 @@ class TreeNode implements Comparable<TreeNode> {
         children = new ArrayList();
     }
 
-
-    
-                 public TreeNode(TreeNode parent, ArrayList<TreeNode> children) {
+    public TreeNode(TreeNode parent, ArrayList<TreeNode> children) {
         this.parent = parent;
         this.children = children;
         content = "";
