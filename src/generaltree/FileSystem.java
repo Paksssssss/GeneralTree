@@ -51,7 +51,7 @@ public class FileSystem {
     int editMode;
     URL inputFilePath;
     Scanner file;
-    
+
     public static void main(String[] args) throws FileNotFoundException {
         FileSystem fs = new FileSystem();
         EventQueue.invokeLater(new Runnable() {
@@ -143,8 +143,8 @@ public class FileSystem {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
-    
-    private static void readCommandsFromfile(Scanner file){
+
+    private static void readCommandsFromfile(Scanner file) {
     }
 
     //this parses user input to determine command
@@ -201,7 +201,9 @@ public class FileSystem {
                 this.deleteFile(actualInput);
             } else if (command.equals("mv")) {
                 this.move(actualInput, otherInput);
-            } else {
+            } else if (command.equals("cp")){
+                this.copy(actualInput,otherInput);
+            }else {
                 textArea.setText(textArea.getText().concat(">" + command + "\nCommand '" + command + "' not found.\n"));
             }
         } else {
@@ -297,12 +299,30 @@ public class FileSystem {
         }
     }
 
+    public void copy(String fileName, String copyName){
+        TreeNode tempNode = system.goToLocalPath(fileName),tmp = new TreeNode();
+        if (tempNode!=null) {
+            tmp.setParent(tempNode.getParent());
+            tmp.setChildren(tempNode.getChildren());
+            tmp.setContent(tempNode.getContent());
+            tmp.setFileDescriptor(tempNode.getFileDescriptor());
+            if (copyName.contains(".")) {
+                tmp.setFileDescriptor(new Descriptor(copyName.split(".")[0],copyName.split(".")[1]));
+            } else {
+                tmp.setFileDescriptor(new Descriptor(copyName,""));
+            }
+            system.insert(tmp);
+        } else {
+            textArea.setText(textArea.getText().concat(">" + fileName + ": No such file or directory.\n"));
+        }
+    }
+    
     public void show(String fileName) {
         TreeNode tempNode = system.goToLocalPath(fileName);
         if (tempNode != null) {
             textArea.setText(textArea.getText().concat(tempNode.getContent() + "\n"));
         } else {
-                textArea.setText(textArea.getText().concat(">" + fileName + ": No such file or directory.\n"));
+            textArea.setText(textArea.getText().concat(">" + fileName + ": No such file or directory.\n"));
         }
     }
 
@@ -414,7 +434,7 @@ public class FileSystem {
                         textArea.setText(textArea.getText().concat(">File: '" + path + "' deleted.\n"));
                     }
                 } else {
-                textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));;
+                    textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));;
                 }
             }
         }
@@ -438,24 +458,42 @@ public class FileSystem {
                 textArea.setText(textArea.getText().concat(node.getDesc()));
             }
         } else {
-            tempNode = this.system.goToLocalPath(path);
-            boolean hasSuf = false;
-            String suffix = "";
-            if (path.startsWith("*")) {
-                hasSuf = true;
-                if (path.length() == 1) {
-                    suffix = "";
-                } else {
-                    suffix = path.substring(1);
+            boolean hasSuf = false, hasPref = false, hasBoth= false, all = false;
+            String fix = "";
+            if(path.contains("*")){
+                tempNode = system.currentNode;
+            } else {
+                tempNode = this.system.goToLocalPath(path);
+            }
+            if (path.length()==1 && path.matches("*")) {
+                all = true;
+            } else {
+                if (path.startsWith("*") && path.endsWith("*")) {
+                    hasBoth = true;
+                    fix = path.substring(1, path.length()-2);
+                } else if (path.startsWith("*")) {
+                    hasSuf = true;
+                    fix = path.substring(1);
+                } else if (path.endsWith("*")) {
+                    hasPref = true;
+                    fix = path.substring(0, path.length()-2);
                 }
             }
             if (tempNode != null) {
                 for (TreeNode node : tempNode.getChildren()) {
                     if (hasSuf) {
-                        if (node.getShortName().endsWith(suffix)) {
+                        if (node.getShortName().endsWith(fix)) {
                             textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
                         }
-                    } else {
+                    } else if (hasPref){
+                        if (node.getShortName().startsWith(fix)) {
+                            textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
+                        }
+                    } else if (hasBoth){
+                        if (node.getShortName().contains(fix)) {
+                            textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
+                        }
+                    } else if (all) {
                         textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
                     }
                 }
@@ -737,14 +775,14 @@ class GeneralTree {
         }
         for (; ctr < tempPath.length; ctr++) {
             error = true;
-            while(ctr < tempPath.length&&tempPath[ctr].equals("..")){
+            while (ctr < tempPath.length && tempPath[ctr].equals("..")) {
                 System.out.println(tempPath[ctr]);
-                if (temp.compareTo(root)==0) {
+                if (temp.compareTo(root) == 0) {
                     temp = temp.getParent();
                 }
                 ctr++;
             }
-            
+
             if (ctr >= tempPath.length) {
                 error = false;
                 break;
@@ -753,7 +791,7 @@ class GeneralTree {
                 if (node.getShortName().equals(tempPath[ctr])) {
                     temp = node;
                     error = false;
-                } 
+                }
             }
             if (error) {
                 return null;
