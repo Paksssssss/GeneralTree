@@ -100,7 +100,7 @@ public class FileSystem {
                 Component source = (Component) e.getSource();
                 if (source instanceof JTextField && e.getKeyCode() == KeyEvent.VK_ESCAPE && writeMode) {
                     system.currentNode.setContent(fileContent);
-                    
+
                     system.currentNode = system.currentNode.getParent();
                     writeMode = false;
                     textArea.setText(textArea.getText().concat("File Edited\n"));
@@ -200,8 +200,10 @@ public class FileSystem {
                 this.deleteFile(actualInput);
             } else if (command.equals("mv")) {
                 this.move(actualInput, otherInput);
-            } else if (command.equals("cp")){
-                this.copy(actualInput,otherInput);
+            } else if (command.equals("cp")) {
+                this.copy(actualInput, otherInput);
+            } else if (command.equals("clear")){
+                textArea.setText("");
             }else {
                 textArea.setText(textArea.getText().concat(">" + command + "\nCommand '" + command + "' not found.\n"));
             }
@@ -213,17 +215,8 @@ public class FileSystem {
     }
 
     public void edit(String input) {
-        if (editMode == 0) {
-            fileContent += input + "\n";
-        } else if (editMode == 1) {
-            fileContent = system.currentNode.getContent();
-            fileContent += input + "\n";
-        } else if (editMode == 2) {
-            fileContent = system.currentNode.getContent();
-            fileContent += input + "\n";
-        }
+        fileContent += input + "\n";
         textArea.setText(textArea.getText().concat(">" + input + "\n"));
-
     }
 
     public void setEditMode(String command, String path) {
@@ -241,10 +234,13 @@ public class FileSystem {
                     writeMode = true;
                     if (command.equals(">")) {
                         editMode = 0;
+                        fileContent = "";
                     } else if (command.equals(">>")) {
                         editMode = 1;
+                        fileContent = system.currentNode.getContent();
                     } else if (command.equals("edit")) {
                         editMode = 2;
+                        fileContent = system.currentNode.getContent();
                         textArea.setText(textArea.getText() + system.currentNode.getContent() + "\n");
                     }
                 }
@@ -258,10 +254,13 @@ public class FileSystem {
                 writeMode = true;
                 if (command.equals(">")) {
                     editMode = 0;
+                    fileContent = "";
                 } else if (command.equals(">>")) {
                     editMode = 1;
+                    fileContent = system.currentNode.getContent();
                 } else if (command.equals("edit")) {
                     editMode = 2;
+                    fileContent = system.currentNode.getContent();
                     textArea.setText(textArea.getText() + system.currentNode.getContent() + "\n");
                 }
             }
@@ -277,8 +276,10 @@ public class FileSystem {
                         editMode = 0;
                     } else if (command.equals(">>")) {
                         editMode = 1;
+                        fileContent = system.currentNode.getContent();
                     } else if (command.equals("edit")) {
                         editMode = 2;
+                        fileContent = system.currentNode.getContent();
                         textArea.setText(textArea.getText() + system.currentNode.getContent());
                     }
                 }
@@ -290,32 +291,34 @@ public class FileSystem {
                     editMode = 0;
                 } else if (command.equals(">>")) {
                     editMode = 1;
+                    fileContent = system.currentNode.getContent();
                 } else if (command.equals("edit")) {
                     editMode = 2;
+                    fileContent = system.currentNode.getContent();
                     textArea.setText(textArea.getText() + system.currentNode.getContent());
                 }
             }
         }
     }
 
-    public void copy(String fileName, String copyName){
-        TreeNode tempNode = system.goToLocalPath(fileName),tmp = new TreeNode();
-        if (tempNode!=null) {
+    public void copy(String fileName, String copyName) {
+        TreeNode tempNode = system.goToLocalPath(fileName), tmp = new TreeNode();
+        if (tempNode != null) {
             tmp.setParent(tempNode.getParent());
             tmp.setChildren(tempNode.getChildren());
             tmp.setContent(tempNode.getContent());
             tmp.setFileDescriptor(tempNode.getFileDescriptor());
             if (copyName.contains(".")) {
-                tmp.setFileDescriptor(new Descriptor(copyName.split(".")[0],copyName.split(".")[1]));
+                tmp.setFileDescriptor(new Descriptor(copyName.split(".")[0], copyName.split(".")[1]));
             } else {
-                tmp.setFileDescriptor(new Descriptor(copyName,""));
+                tmp.setFileDescriptor(new Descriptor(copyName, ""));
             }
             system.insert(tmp);
         } else {
             textArea.setText(textArea.getText().concat(">" + fileName + ": No such file or directory.\n"));
         }
     }
-    
+
     public void show(String fileName) {
         TreeNode tempNode = system.goToLocalPath(fileName);
         if (tempNode != null) {
@@ -457,26 +460,24 @@ public class FileSystem {
                 textArea.setText(textArea.getText().concat(node.getDesc()));
             }
         } else {
-            boolean hasSuf = false, hasPref = false, hasBoth= false, all = false;
+            boolean hasSuf = false, hasPref = false, hasBoth = false, all = false;
             String fix = "";
-            if(path.contains("*")){
+            if (path.contains("*")) {
                 tempNode = system.currentNode;
             } else {
                 tempNode = this.system.goToLocalPath(path);
             }
-            if (path.length()==1 && path.matches("*")) {
+            if (path.length() == 1 && path.matches("*")) {
                 all = true;
-            } else {
-                if (path.startsWith("*") && path.endsWith("*")) {
-                    hasBoth = true;
-                    fix = path.substring(1, path.length()-2);
-                } else if (path.startsWith("*")) {
-                    hasSuf = true;
-                    fix = path.substring(1);
-                } else if (path.endsWith("*")) {
-                    hasPref = true;
-                    fix = path.substring(0, path.length()-2);
-                }
+            } else if (path.startsWith("*") && path.endsWith("*")) {
+                hasBoth = true;
+                fix = path.substring(1, path.length() - 2);
+            } else if (path.startsWith("*")) {
+                hasSuf = true;
+                fix = path.substring(1);
+            } else if (path.endsWith("*")) {
+                hasPref = true;
+                fix = path.substring(0, path.length() - 2);
             }
             if (tempNode != null) {
                 for (TreeNode node : tempNode.getChildren()) {
@@ -484,11 +485,11 @@ public class FileSystem {
                         if (node.getShortName().endsWith(fix)) {
                             textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
                         }
-                    } else if (hasPref){
+                    } else if (hasPref) {
                         if (node.getShortName().startsWith(fix)) {
                             textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
                         }
-                    } else if (hasBoth){
+                    } else if (hasBoth) {
                         if (node.getShortName().contains(fix)) {
                             textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
                         }
