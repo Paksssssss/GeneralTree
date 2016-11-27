@@ -16,6 +16,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -23,6 +26,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Scanner;
 import javax.swing.*;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.NavigationFilter;
@@ -45,10 +49,11 @@ public class FileSystem {
     NavigationFilterPrefixWithBackspace nf;
     boolean writeMode = false;
     int editMode;
-
-    public static void main(String[] args) {
+    URL inputFilePath;
+    Scanner file;
+    
+    public static void main(String[] args) throws FileNotFoundException {
         FileSystem fs = new FileSystem();
-
         EventQueue.invokeLater(new Runnable() {
             public void run() {
                 showUI(fs);
@@ -58,7 +63,7 @@ public class FileSystem {
     }
 
     public FileSystem() {
-        TreeNode home = new TreeNode("home");
+        TreeNode home = new TreeNode("root");
         home.getFileDescriptor().isDir = true;
         system = new GeneralTree(home);
         Color c = new Color(0, 0, 0);
@@ -137,6 +142,9 @@ public class FileSystem {
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+    }
+    
+    private static void readCommandsFromfile(Scanner file){
     }
 
     //this parses user input to determine command
@@ -729,11 +737,17 @@ class GeneralTree {
         }
         for (; ctr < tempPath.length; ctr++) {
             error = true;
-            while(tempPath[ctr].equals("..")){
+            while(ctr < tempPath.length&&tempPath[ctr].equals("..")){
+                System.out.println(tempPath[ctr]);
                 if (temp.compareTo(root)==0) {
                     temp = temp.getParent();
                 }
                 ctr++;
+            }
+            
+            if (ctr >= tempPath.length) {
+                error = false;
+                break;
             }
             for (TreeNode node : temp.getChildren()) {
                 if (node.getShortName().equals(tempPath[ctr])) {
