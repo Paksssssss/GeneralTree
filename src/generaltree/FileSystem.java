@@ -99,9 +99,8 @@ public class FileSystem {
             public void keyPressed(KeyEvent e) {
                 Component source = (Component) e.getSource();
                 if (source instanceof JTextField && e.getKeyCode() == KeyEvent.VK_ESCAPE && writeMode) {
-                    if (editMode == 0) {
-                        system.currentNode.setContent(fileContent);
-                    }
+                    system.currentNode.setContent(fileContent);
+                    
                     system.currentNode = system.currentNode.getParent();
                     writeMode = false;
                     textArea.setText(textArea.getText().concat("File Edited\n"));
