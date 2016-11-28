@@ -16,9 +16,19 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.URL;
+import java.nio.file.Files;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -27,6 +37,8 @@ import java.util.Date;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.*;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.NavigationFilter;
@@ -38,7 +50,7 @@ import javax.swing.text.Position;
  */
 public class FileSystem {
 
-    private GeneralTree system;
+    private static GeneralTree system;
     JTextField textField;
     JTextArea textArea;
     KeyListener kl;
@@ -48,24 +60,62 @@ public class FileSystem {
     String fileContent = "";
     NavigationFilterPrefixWithBackspace nf;
     boolean writeMode = false;
+    static boolean serReadSuccess;
     int editMode;
     URL inputFilePath;
     Scanner file;
 
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws FileNotFoundException, IOException {
         FileSystem fs = new FileSystem();
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                serialize();
+            }
+        });
         EventQueue.invokeLater(new Runnable() {
             public void run() {
+                deSerialize();
                 showUI(fs);
             }
         });
-
+        
+    }
+    
+    public static void serialize(){
+        try {
+            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+            ObjectOutputStream objectOut = new ObjectOutputStream(byteOut);
+            objectOut.writeObject(system);
+            FileOutputStream outFile = new FileOutputStream("./tree.ser");
+            outFile.write(byteOut.toByteArray());
+            outFile.close();
+        } catch (IOException ex) {
+            Logger.getLogger(FileSystem.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public static void deSerialize(){
+        try {
+            ByteArrayInputStream byteIn = new ByteArrayInputStream(Files.readAllBytes(new File("./tree.ser").toPath()));
+            ObjectInputStream objectIn = new ObjectInputStream(byteIn);
+            system =  (GeneralTree) objectIn.readObject();
+            serReadSuccess = true;
+        }catch(IOException i) {
+            System.out.println("Serializable file not found");
+            i.printStackTrace();
+        }catch(ClassNotFoundException c) {
+            System.out.println("GeneralTree class not found");
+            c.printStackTrace();
+        }
+        if (!serReadSuccess) {
+            System.out.println("in");
+            TreeNode home = new TreeNode("root",true);
+            system = new GeneralTree(home);
+        }
     }
 
     public FileSystem() {
-        TreeNode home = new TreeNode("root");
-        home.getFileDescriptor().isDir = true;
-        system = new GeneralTree(home);
         Color c = new Color(0, 0, 0);
         panel = new JPanel();
         Font f = new Font("Roboto", Font.PLAIN, 13);
@@ -114,7 +164,7 @@ public class FileSystem {
             }
         };
 
-        textField = new JTextField("/home:");
+        textField = new JTextField("/root:");
         textField.setNavigationFilter(nf);
         textField.setBackground(c);
         textField.setForeground(Color.WHITE);
@@ -126,11 +176,6 @@ public class FileSystem {
         textField.addKeyListener(kl);
         nf = new NavigationFilterPrefixWithBackspace(6, textField);
         frame = new JFrame("FileSystem");
-        frame.addWindowListener(new WindowAdapter() {
-            public void windowOpened(WindowEvent e) {
-                textField.requestFocus();
-            }
-        });
         panel.add(scrollPane);
         panel.add(textField);
     }
@@ -322,7 +367,11 @@ public class FileSystem {
     public void show(String fileName) {
         TreeNode tempNode = system.goToLocalPath(fileName);
         if (tempNode != null) {
-            textArea.setText(textArea.getText().concat(tempNode.getContent() + "\n"));
+            if (tempNode.getFileDescriptor().isDir) {
+                textArea.setText(textArea.getText().concat(">" + fileName + ": is a directory.\n"));
+            } else {
+                textArea.setText(textArea.getText().concat(tempNode.getContent() + "\n"));
+            }
         } else {
             textArea.setText(textArea.getText().concat(">" + fileName + ": No such file or directory.\n"));
         }
@@ -610,16 +659,11 @@ public class FileSystem {
 
 }
 
-class GeneralTree {
+class GeneralTree implements Serializable{
 
     TreeNode root;
     TreeNode currentNode;
-    int height;
     String pathToCurrent;
-
-    public GeneralTree() {
-        root = null;
-    }
 
     public GeneralTree(TreeNode root) {
         this.root = root;
@@ -811,7 +855,7 @@ class GeneralTree {
     }
 }
 
-class Descriptor implements Comparable<Descriptor> {
+class Descriptor implements Comparable<Descriptor> ,Serializable{
 
     boolean isDir;
     String fileType;
@@ -847,7 +891,7 @@ class Descriptor implements Comparable<Descriptor> {
     }
 }
 
-class TreeNode implements Comparable<TreeNode> {
+class TreeNode implements Comparable<TreeNode> , Serializable{
 
     private TreeNode parent;
     private String content;
