@@ -23,17 +23,22 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Scanner;
@@ -48,45 +53,35 @@ import javax.swing.text.Position;
  *
  * @author user
  */
-public class FileSystem {
+public class runProgram {
+
+    public static void main(String[] args) throws IOException {
+        FileSystem fs = new FileSystem();
+        fs.readCommandsFromFile();
+    }
+}
+
+class FileSystem {
 
     private static GeneralTree system;
     JTextField textField;
     JTextArea textArea;
     KeyListener kl;
     JPanel panel;
+    JFrame frame;
     Action action;
-    static JFrame frame;
-    String fileContent = "";
+    String fileContent = "", writeThisToFile = "";
     NavigationFilterPrefixWithBackspace nf;
-    boolean writeMode = false;
+    boolean writeMode = false, readingFile = false;
     static boolean serReadSuccess;
-    int editMode;
+    int editMode, lineCtr = 0;
     URL inputFilePath;
-    Scanner file;
 
-    public static void main(String[] args) throws FileNotFoundException, IOException {
-        FileSystem fs = new FileSystem();
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                serialize();
-            }
-        });
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                deSerialize();
-                showUI(fs);
-            }
-        });
-        
-    }
-    
-    public static void serialize(){
+    public static void serialize() {
         try {
             ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
             ObjectOutputStream objectOut = new ObjectOutputStream(byteOut);
-            objectOut.writeObject(system);
+            objectOut.writeObject(system.root);
             FileOutputStream outFile = new FileOutputStream("./tree.ser");
             outFile.write(byteOut.toByteArray());
             outFile.close();
@@ -94,28 +89,25 @@ public class FileSystem {
             Logger.getLogger(FileSystem.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    public static void deSerialize(){
+
+    public static void deSerialize() {
+        TreeNode home = new TreeNode("root", true);
+        system = new GeneralTree(home);
         try {
             ByteArrayInputStream byteIn = new ByteArrayInputStream(Files.readAllBytes(new File("./tree.ser").toPath()));
             ObjectInputStream objectIn = new ObjectInputStream(byteIn);
-            system =  (GeneralTree) objectIn.readObject();
-            serReadSuccess = true;
-        }catch(IOException i) {
+            system.root = (TreeNode) objectIn.readObject();
+        } catch (IOException i) {
             System.out.println("Serializable file not found");
             i.printStackTrace();
-        }catch(ClassNotFoundException c) {
+        } catch (ClassNotFoundException c) {
             System.out.println("GeneralTree class not found");
             c.printStackTrace();
-        }
-        if (!serReadSuccess) {
-            System.out.println("in");
-            TreeNode home = new TreeNode("root",true);
-            system = new GeneralTree(home);
         }
     }
 
     public FileSystem() {
+        deSerialize();
         Color c = new Color(0, 0, 0);
         panel = new JPanel();
         Font f = new Font("Roboto", Font.PLAIN, 13);
@@ -150,11 +142,18 @@ public class FileSystem {
                 Component source = (Component) e.getSource();
                 if (source instanceof JTextField && e.getKeyCode() == KeyEvent.VK_ESCAPE && writeMode) {
                     system.currentNode.setContent(fileContent);
-
                     system.currentNode = system.currentNode.getParent();
                     writeMode = false;
                     textArea.setText(textArea.getText().concat("File Edited\n"));
                     JTextField f = (JTextField) source;
+                    if (readingFile) {
+                        try {
+                            readingFile = false;
+                            readCommandsFromFile();
+                        } catch (IOException ex) {
+                            Logger.getLogger(FileSystem.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
                 }
             }
 
@@ -175,20 +174,45 @@ public class FileSystem {
         textField.addActionListener(action);
         textField.addKeyListener(kl);
         nf = new NavigationFilterPrefixWithBackspace(6, textField);
-        frame = new JFrame("FileSystem");
         panel.add(scrollPane);
         panel.add(textField);
-    }
-
-    public static void showUI(FileSystem fs) {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                serialize();
+                try {
+                    writeToFile();
+                } catch (IOException ex) {
+                    Logger.getLogger(FileSystem.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        });
+        frame = new JFrame("File System");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.add(fs.panel);
+        frame.add(panel);
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
 
-    private static void readCommandsFromfile(Scanner file) {
+    public void readCommandsFromFile() throws IOException {
+        readingFile = true;
+        List<String> lines = Files.readAllLines(Paths.get("./mp3.in"), StandardCharsets.UTF_8);
+        for (; lineCtr < lines.size(); lineCtr++) {
+            textField.setText(system.pathToCurrent + ":" + lines.get(lineCtr));
+            if (textField.getText().contains(">") || textField.getText().contains("edit")) {
+                lineCtr++;
+                break;
+            }
+            commandListener();
+        }
+    }
+
+    public void writeToFile() throws IOException {
+        PrintWriter pw = new PrintWriter(new FileWriter("./mp3.out"));
+        pw.write(writeThisToFile);
+
+        pw.close();
     }
 
     //this parses user input to determine command
@@ -216,6 +240,7 @@ public class FileSystem {
             if (command.equals("mkdir")) {
                 if (actualInput.isEmpty()) {
                     textArea.setText(textArea.getText().concat(system.pathToCurrent + ">usage: mkdir <directory name>\n"));
+                    writeThisToFile += (">usage: mkdir <directory name>\n");
                 } else {
                     this.mkdir(actualInput);
                 }
@@ -223,6 +248,7 @@ public class FileSystem {
             } else if (command.equals("rmdir")) {
                 if (actualInput.isEmpty()) {
                     textArea.setText(textArea.getText().concat(system.pathToCurrent + ">usage: rmdir <directory name>\n"));
+                    writeThisToFile += (">usage: mkdir <directory name>\n");
                 } else {
                     this.rmdir(actualInput);
                 }
@@ -240,16 +266,28 @@ public class FileSystem {
             } else if (command.equals("show")) {
                 this.show(actualInput);
             } else if (command.equals("rn")) {
-                this.rename(actualInput, otherInput);
+                if (actualInput.isEmpty() && otherInput.isEmpty()) {
+                    writeThisToFile += "usage: cp source_file/source_directory target_file/target_directory";
+                } else {
+                    this.rename(actualInput, otherInput);
+                }
             } else if (command.equals("rm")) {
                 this.deleteFile(actualInput);
             } else if (command.equals("mv")) {
-                this.move(actualInput, otherInput);
+                if (actualInput.isEmpty() && otherInput.isEmpty()) {
+                    writeThisToFile += "usage: cp source_file/source_directory target_file/target_directory";
+                } else {
+                    this.move(actualInput, otherInput);
+                }
             } else if (command.equals("cp")) {
-                this.copy(actualInput, otherInput);
-            } else if (command.equals("clear")){
+                if (actualInput.isEmpty() && otherInput.isEmpty()) {
+                    writeThisToFile += "usage: cp source_file/source_directory target_file/target_directory";
+                } else {
+                    this.copy(actualInput, otherInput);
+                }
+            } else if (command.equals("clear")) {
                 textArea.setText("");
-            }else {
+            } else {
                 textArea.setText(textArea.getText().concat(">" + command + "\nCommand '" + command + "' not found.\n"));
             }
         } else {
@@ -294,7 +332,9 @@ public class FileSystem {
                 String fileName = parsePath[parsePath.length - 1];
                 String tempPath = path.replace("/" + fileName, "");
                 system.currentNode = system.goToPath(tempPath);
-                system.insert(new TreeNode(fileName, false));
+                tmp = new TreeNode(fileName, false);
+                tmp.setParent(system.currentNode);
+                system.insert(tmp);
                 system.currentNode = system.goToLocalPath(fileName);
                 writeMode = true;
                 if (command.equals(">")) {
@@ -347,20 +387,46 @@ public class FileSystem {
     }
 
     public void copy(String fileName, String copyName) {
-        TreeNode tempNode = system.goToLocalPath(fileName), tmp = new TreeNode();
-        if (tempNode != null) {
-            tmp.setParent(tempNode.getParent());
-            tmp.setChildren(tempNode.getChildren());
-            tmp.setContent(tempNode.getContent());
-            tmp.setFileDescriptor(tempNode.getFileDescriptor());
-            if (copyName.contains(".")) {
-                tmp.setFileDescriptor(new Descriptor(copyName.split(".")[0], copyName.split(".")[1]));
+        TreeNode tmp = system.goToLocalPath(fileName);
+        if (tmp != null) {
+            if (copyName.contains("/")) {
+                String copyNameParsed[] = copyName.split("/");
+                String newCopyName = copyNameParsed[copyNameParsed.length - 1];
+                String tempPath = copyName.replace("/" + newCopyName, "");
+                TreeNode tempNode = system.goToPath(tempPath), tempNode1 = new TreeNode();
+                if (tempNode != null) {
+                    tempNode1.setParent(tempNode);
+                    tempNode1.setChildren(tmp.getChildren());
+                    tempNode1.setContent(tmp.getContent());
+                    if (copyName.contains(".")) {
+                        tempNode1.setFileDescriptor(new Descriptor(newCopyName.split("\\.")[0], newCopyName.split("\\.")[1]));
+                    } else if (!copyName.isEmpty()) {
+                        tempNode1.setFileDescriptor(new Descriptor(newCopyName, ""));
+                    }
+                    tmp = system.currentNode;
+                    system.currentNode = tempNode;
+                    system.insert(tempNode1);
+                    system.currentNode = tmp;
+                } else {
+                    textArea.setText(textArea.getText().concat(">" + tempPath + ": No such file or directory.\n"));
+                    writeThisToFile += (tempPath + ": No such file or directory.\n");
+                }
             } else {
-                tmp.setFileDescriptor(new Descriptor(copyName, ""));
+                TreeNode tempNode = system.currentNode, tempNode1 = new TreeNode();
+                tempNode1.setParent(tempNode);
+                tempNode1.setChildren(tmp.getChildren());
+                tempNode1.setContent(tmp.getContent());
+                tempNode1.setFileDescriptor(tmp.getFileDescriptor());
+                if (copyName.contains(".")) {
+                    tempNode1.setFileDescriptor(new Descriptor(copyName.split("\\.")[0], copyName.split("\\.")[1]));
+                } else if (!copyName.isEmpty()) {
+                    tempNode1.setFileDescriptor(new Descriptor(copyName, ""));
+                }
+                system.insert(tempNode1);
             }
-            system.insert(tmp);
         } else {
             textArea.setText(textArea.getText().concat(">" + fileName + ": No such file or directory.\n"));
+            writeThisToFile += (fileName + ": No such file or directory.\n");
         }
     }
 
@@ -369,33 +435,60 @@ public class FileSystem {
         if (tempNode != null) {
             if (tempNode.getFileDescriptor().isDir) {
                 textArea.setText(textArea.getText().concat(">" + fileName + ": is a directory.\n"));
+                writeThisToFile += (fileName + ": is a directory.\n");
             } else {
                 textArea.setText(textArea.getText().concat(tempNode.getContent() + "\n"));
+                writeThisToFile += tempNode.getContent();
             }
         } else {
             textArea.setText(textArea.getText().concat(">" + fileName + ": No such file or directory.\n"));
+            writeThisToFile += (fileName + ": is a directory.\n");
         }
     }
 
     public void move(String fileName, String path) {
-        TreeNode tempNode = system.goToLocalPath(fileName);
-        if (tempNode != null) {
-            TreeNode tempNode2 = system.goToPath(path), tmp;
-            if (tempNode2 != null) {
-                if (tempNode2.getFileDescriptor().isDir) {
+        TreeNode tmp = system.goToLocalPath(fileName);
+        if (tmp != null) {
+            if (path.contains("/")) {
+                String copyNameParsed[] = path.split("/");
+                String newCopyName = copyNameParsed[copyNameParsed.length - 1];
+                String tempPath = path.replace("/" + newCopyName, "");
+                TreeNode tempNode = system.goToPath(tempPath), tempNode1 = new TreeNode();
+                if (tempNode != null) {
+                    tempNode1.setParent(tempNode);
+                    tempNode1.setChildren(tmp.getChildren());
+                    tempNode1.setContent(tmp.getContent());
+                    if (path.contains(".")) {
+                        tempNode1.setFileDescriptor(new Descriptor(newCopyName.split("\\.")[0], newCopyName.split("\\.")[1]));
+                    } else if (!path.isEmpty()) {
+                        tempNode1.setFileDescriptor(new Descriptor(newCopyName, ""));
+                    }
                     tmp = system.currentNode;
-                    system.currentNode = tempNode2;
-                    system.insert(tempNode);
+                    system.currentNode = tempNode;
+                    system.insert(tempNode1);
                     system.currentNode = tmp;
-                    system.delete(tempNode);
+                    system.delete(system.goToLocalPath(fileName));
                 } else {
-                    textArea.setText(textArea.getText().concat(">" + path + " is not a directory."));
+                    textArea.setText(textArea.getText().concat(">" + tempPath + ": No such file or directory.\n"));
+                    writeThisToFile += (tempPath + ": No such file or directory.\n");
                 }
             } else {
-                textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));
+                TreeNode tempNode = system.currentNode, tempNode1 = new TreeNode();
+                tempNode1.setParent(tempNode);
+                tempNode1.setChildren(tmp.getChildren());
+                tempNode1.setContent(tmp.getContent());
+                tempNode1.setFileDescriptor(tmp.getFileDescriptor());
+                if (path.contains(".")) {
+                    tempNode1.setFileDescriptor(new Descriptor(path.split("\\.")[0], path.split("\\.")[1]));
+                } else if (!path.isEmpty()) {
+                    tempNode1.setFileDescriptor(new Descriptor(path, ""));
+                }
+                system.insert(tempNode1);
+                system.delete(tmp);
             }
         } else {
-            textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));;
+            textArea.setText(textArea.getText().concat(">" + fileName + ": No such file or directory.\n"));
+            writeThisToFile += (fileName + ": No such file or directory.\n");
         }
     }
 
@@ -406,9 +499,9 @@ public class FileSystem {
         files.add(system.root);
         while (!files.isEmpty()) {
             tempNode = files.poll();
-            System.out.println(tempNode.getShortName());
             if (tempNode.getShortName().equals(fileName)) {
                 textArea.setText(textArea.getText().concat(">" + system.returnPath(tempNode) + "\n"));
+                writeThisToFile += (system.returnPath(tempNode) + "\n");
             }
             files.addAll(tempNode.getChildren());
         }
@@ -421,10 +514,11 @@ public class FileSystem {
         TreeNode temp = system.goToLocalPath(original);
         if (temp != null) {
             if (newName.contains(".")) {
-                String parsedName[] = newName.split(".");
+                String parsedName[] = newName.split("\\.");
                 temp.getFileDescriptor().fileName = parsedName[0];
                 temp.getFileDescriptor().fileType = parsedName[1];
                 temp.getFileDescriptor().setDate();
+                System.out.println(temp.getShortName());
                 textArea.setText(textArea.getText().concat(">" + original + " renamed to " + newName + "\n"));
             } else {
                 temp.getFileDescriptor().fileName = newName;
@@ -433,6 +527,7 @@ public class FileSystem {
             }
         } else {
             textArea.setText(textArea.getText().concat(">" + original + ": No such file or directory.\n"));
+            writeThisToFile += (original + ": No such file or directory.\n");
         }
     }
 
@@ -455,6 +550,7 @@ public class FileSystem {
                 }
             } else {
                 textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));
+                writeThisToFile += (path + ": No such file or directory.\n");
             }
         } else {
             String suffix;
@@ -466,7 +562,6 @@ public class FileSystem {
                     suffix = path.substring(1);
                 }
                 for (TreeNode node : system.currentNode.getChildren()) {
-                    System.out.println(node.getShortName());
                     if (node.getShortName().endsWith(suffix)) {
                         toDelete.add(node);
                     }
@@ -485,7 +580,8 @@ public class FileSystem {
                         textArea.setText(textArea.getText().concat(">File: '" + path + "' deleted.\n"));
                     }
                 } else {
-                    textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));;
+                    textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));
+                    writeThisToFile += (path + ": No such file or directory.\n");
                 }
             }
         }
@@ -499,51 +595,35 @@ public class FileSystem {
                 for (TreeNode node : tempNode.getChildren()) {
                     //should print out contents of current director
                     textArea.setText(textArea.getText().concat(node.getDesc()));
+                    writeThisToFile += node.getShortName() + "\n";
                 }
             } else {
                 textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));
+                writeThisToFile += (path + ": No such file or directory.\n");
             }
         } else if (path.isEmpty()) {
             for (TreeNode node : system.currentNode.getChildren()) {
                 //should print out contents of current directory
                 textArea.setText(textArea.getText().concat(node.getDesc()));
+
+                writeThisToFile += node.getShortName() + "\n";
             }
         } else {
-            boolean hasSuf = false, hasPref = false, hasBoth = false, all = false;
             String fix = "";
             if (path.contains("*")) {
                 tempNode = system.currentNode;
+                fix = path;
+                fix = fix.replaceAll("\\.", "\\\\.");
+                fix = fix.replaceAll("\\*", ".*");
             } else {
                 tempNode = this.system.goToLocalPath(path);
             }
-            if (path.length() == 1 && path.matches("*")) {
-                all = true;
-            } else if (path.startsWith("*") && path.endsWith("*")) {
-                hasBoth = true;
-                fix = path.substring(1, path.length() - 2);
-            } else if (path.startsWith("*")) {
-                hasSuf = true;
-                fix = path.substring(1);
-            } else if (path.endsWith("*")) {
-                hasPref = true;
-                fix = path.substring(0, path.length() - 2);
-            }
             if (tempNode != null) {
                 for (TreeNode node : tempNode.getChildren()) {
-                    if (hasSuf) {
-                        if (node.getShortName().endsWith(fix)) {
-                            textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
-                        }
-                    } else if (hasPref) {
-                        if (node.getShortName().startsWith(fix)) {
-                            textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
-                        }
-                    } else if (hasBoth) {
-                        if (node.getShortName().contains(fix)) {
-                            textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
-                        }
-                    } else if (all) {
-                        textArea.setText(textArea.getText().concat(system.pathToCurrent + node.getDesc()));
+                    if (node.getShortName().matches(fix)) {
+                        textArea.setText(textArea.getText().concat(node.getDesc()));
+
+                        writeThisToFile += node.getShortName() + "\n";
                     }
                 }
             } else {
@@ -564,6 +644,7 @@ public class FileSystem {
                 }
             } else {
                 textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));
+                writeThisToFile += path + ": No such file or directory.\n";
             }
         } else if (path.isEmpty()) {
             system.currentNode = system.root;
@@ -578,12 +659,11 @@ public class FileSystem {
                     textArea.setText(textArea.getText().concat(">" + temp.getShortName() + " is not a Directory.\n"));
                 }
             } else {
+                writeThisToFile += path + ": No such file or directory.\n";
                 textArea.setText(textArea.getText().concat(">" + path + ": No such file or directory.\n"));
-
             }
         }
         system.setPathToCurrent();
-        System.out.println(system.pathToCurrent);
         nf.prefixLength = system.pathToCurrent.length() + 1;
         textField.setText(system.pathToCurrent + ":");
     }
@@ -600,21 +680,22 @@ public class FileSystem {
                 tempNode = system.currentNode;
                 system.currentNode = system.goToPath(tempPath);
                 overwritting = system.insert(new TreeNode(dirName, true));
-                System.out.println(overwritting + "dasd");
                 if (overwritting) {
                     textArea.setText(textArea.getText().concat("> Overwritting Redundant Folder. Directory Created.\n"));
+                    writeThisToFile += dirName + ": Already exists\n";
                 } else {
                     textArea.setText(textArea.getText().concat(">Directory Created.\n"));
                 }
                 system.currentNode = tempNode;
             } else {
                 textArea.setText(textArea.getText().concat(">" + tempPath + ": No such file or directory.\n"));
+                writeThisToFile += tempPath + ": No such file or directory.\n";
             }
         } else {
             overwritting = system.insert(new TreeNode(dirName, true));
-            System.out.println(overwritting + "dasd");
             if (overwritting) {
                 textArea.setText(textArea.getText().concat(">Overwritting Redundant Folder. Directory Created.\n"));
+                writeThisToFile += path + ": Already exists\n";
             } else {
                 textArea.setText(textArea.getText().concat(">Directory Created.\n"));
             }
@@ -659,7 +740,7 @@ public class FileSystem {
 
 }
 
-class GeneralTree implements Serializable{
+class GeneralTree implements Serializable {
 
     TreeNode root;
     TreeNode currentNode;
@@ -682,7 +763,6 @@ class GeneralTree implements Serializable{
                 temp = temp.getParent();
             }
         }
-        System.out.println(pathToCurrent);
     }
 
     public TreeNode search(TreeNode node) {
@@ -734,7 +814,6 @@ class GeneralTree implements Serializable{
             this.currentNode.getChildren().add(node);
             return false;
         } else {
-            System.out.println("overwritting");
             node.setParent(this.currentNode);
             this.currentNode.getChildren().remove(redundantNode);
             this.currentNode.getChildren().add(node);
@@ -797,7 +876,7 @@ class GeneralTree implements Serializable{
 
     public TreeNode goToLocalPath(String path) {
         for (TreeNode node : this.currentNode.getChildren()) {
-            if (node.getFileDescriptor().fileName.matches(path)) {
+            if (node.getShortName().matches(path)) {
                 return node;
             }
         }
@@ -820,7 +899,6 @@ class GeneralTree implements Serializable{
         for (; ctr < tempPath.length; ctr++) {
             error = true;
             while (ctr < tempPath.length && tempPath[ctr].equals("..")) {
-                System.out.println(tempPath[ctr]);
                 if (temp.compareTo(root) == 0) {
                     temp = temp.getParent();
                 }
@@ -855,7 +933,7 @@ class GeneralTree implements Serializable{
     }
 }
 
-class Descriptor implements Comparable<Descriptor> ,Serializable{
+class Descriptor implements Comparable<Descriptor>, Serializable {
 
     boolean isDir;
     String fileType;
@@ -891,7 +969,7 @@ class Descriptor implements Comparable<Descriptor> ,Serializable{
     }
 }
 
-class TreeNode implements Comparable<TreeNode> , Serializable{
+class TreeNode implements Comparable<TreeNode>, Serializable {
 
     private TreeNode parent;
     private String content;
